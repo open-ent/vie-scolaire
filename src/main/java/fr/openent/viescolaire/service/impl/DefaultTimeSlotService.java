@@ -240,7 +240,7 @@ public class DefaultTimeSlotService implements TimeSlotService {
                 .add(slot.getString("name"))
                 .add(slot.getString("startHour"))
                 .add(slot.getString("endHour"));
-        return "(?, ?, ?, ?, ?)";
+        return "(?, ?, ?, ?::time, ?::time)";
     }
 
     @Override
