@@ -23,6 +23,24 @@ jobs:
           java-version: '8'
           distribution: temurin
           cache: maven
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      # Build le frontend AVANT le package Maven : produit le shell view/
+      # (gulp updateRefs copie view-src/*.html -> view/viescolaire/*.html, dont
+      # vsco_personnel.html rendu par DisplayController) + les bundles JS
+      # (public/dist, public/js/behaviours.js) et le CSS (public/css).
+      # Sans cette etape le fat-jar a "view/: 0" et GET /viescolaire renvoie 500.
+      - name: Build frontend (gulp + sass)
+        run: |
+          pnpm install --frozen-lockfile || pnpm install
+          node node_modules/gulp/bin/gulp.js build
+          pnpm run build:sass
+      - name: Verifier la presence du shell view/
+        run: test -f src/main/resources/view/viescolaire/vsco_personnel.html
       - name: Configure Maven pour GitHub Packages
         run: |
           mkdir -p ~/.m2
@@ -80,7 +98,7 @@ jobs:
 
       - name: Publish fat JAR to rct-nexus
         continue-on-error: true
-        if: startsWith(github.ref, 'refs/tags/')
+        if: startsWith(github.ref, 'refs/tags/') || endsWith(github.ref, '-patched') || endsWith(github.ref, '-patched-dev')
         env:
           NEXUS_USER: ${{ secrets.NEXUS_USER }}
           NEXUS_PASSWORD: ${{ secrets.NEXUS_PASSWORD }}
