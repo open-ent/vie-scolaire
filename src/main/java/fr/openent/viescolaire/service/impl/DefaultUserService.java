@@ -578,6 +578,12 @@ public class DefaultUserService extends SqlCrudService implements UserService {
     @Override
     public void getActivesIDsStructures(UserInfos userInfos, String module,
                                         Handler<Either<String, JsonArray>> handler) {
+        // Garde : sans structure, Sql.listPrepared génère un "IN ()" invalide
+        // (PostgreSQL : syntax error at or near ")"). On renvoie un résultat vide.
+        if (userInfos.getStructures() == null || userInfos.getStructures().isEmpty()) {
+            handler.handle(new Either.Right<String, JsonArray>(new JsonArray()));
+            return;
+        }
         StringBuilder query =new StringBuilder();
         JsonArray params = new JsonArray();
 
