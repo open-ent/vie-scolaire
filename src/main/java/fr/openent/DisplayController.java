@@ -50,7 +50,16 @@ public class DisplayController extends ControllerHelper {
                 .put("ENABLE_EDT", services.getBoolean("edt", false))
                 .put("ENABLE_MASSMAILING", services.getBoolean("massmailing", false))
                 .put("ENABLE_INCIDENTS", services.getBoolean("incidents", false));
-        renderView(request, params, "viescolaire/vsco_personnel.html", null);
+        // CCTP 51C — bascule AngularJS/React. Défaut piloté par la conf `frontend-ui`
+        // (fallback "angular"), surchargée à la demande par `?ui=react|angular`.
+        final String uiParam = request.params().get("ui");
+        final String frontendUi = "react".equals(config.getString("frontend-ui", "angular")) ? "react" : "angular";
+        final String ui = ("react".equals(uiParam) || "angular".equals(uiParam)) ? uiParam : frontendUi;
+        if ("react".equals(ui)) {
+            renderView(request, new JsonObject(), "viescolaire/vsco_react.html", null);
+        } else {
+            renderView(request, params, "viescolaire/vsco_personnel.html", null);
+        }
         eventHelper.onAccess(request);
     }
 }
