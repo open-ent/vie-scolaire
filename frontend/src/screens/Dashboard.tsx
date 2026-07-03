@@ -15,6 +15,7 @@ export function Dashboard() {
   const periodesQuery = useQuery({ queryKey: ['viesco', 'periodes', structureId], queryFn: () => api.getPeriodes(structureId), enabled: !!structureId });
   const typesQuery = useQuery({ queryKey: ['viesco', 'periode-types'], queryFn: () => api.getPeriodeTypes(), enabled: !!structureId });
   const yearQuery = useQuery({ queryKey: ['viesco', 'schoolyear', structureId], queryFn: () => api.getSchoolYear(structureId), enabled: !!structureId });
+  const slotsQuery = useQuery({ queryKey: ['viesco', 'timeslots', structureId], queryFn: () => api.getTimeSlots(structureId), enabled: !!structureId });
   const matieresQuery = useQuery({ queryKey: ['viesco', 'matieres', structureId], queryFn: () => api.getMatieres(structureId), enabled: !!structureId });
   const classesQuery = useQuery({ queryKey: ['viesco', 'classes', structureId], queryFn: () => api.getClasses(structureId), enabled: !!structureId });
 
@@ -136,6 +137,28 @@ export function Dashboard() {
             <ul className="list-unstyled mb-0">
               {classes.map((c) => (
                 <li key={c.id} className="py-4 border-bottom">{c.name}</li>
+              ))}
+            </ul>
+          )}
+        </section>
+
+        {/* Plages horaires */}
+        <section className="card p-16 flex-grow-1" style={{ minWidth: 240 }}>
+          <h2 style={{ fontSize: 18 }} className="mb-12">
+            {t('viescolaire.timeslots', { defaultValue: 'Plages horaires' })}{' '}
+            <span className="text-muted" style={{ fontSize: 14 }}>({(slotsQuery.data ?? []).length})</span>
+          </h2>
+          {slotsQuery.isLoading && <p>{t('viescolaire.loading', { defaultValue: 'Chargement…' })}</p>}
+          {!slotsQuery.isLoading && (slotsQuery.data ?? []).length === 0 && (
+            <p className="text-muted">{t('viescolaire.timeslots.empty', { defaultValue: 'Aucune plage horaire.' })}</p>
+          )}
+          {(slotsQuery.data ?? []).length > 0 && (
+            <ul className="list-unstyled mb-0">
+              {(slotsQuery.data ?? []).map((s) => (
+                <li key={s.id} className="d-flex justify-content-between py-4 border-bottom">
+                  <span>{s.name}</span>
+                  <span className="text-muted" style={{ fontVariantNumeric: 'tabular-nums' }}>{s.startHour}–{s.endHour}</span>
+                </li>
               ))}
             </ul>
           )}

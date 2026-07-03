@@ -39,6 +39,14 @@ export interface SchoolYear {
   is_opening?: boolean;
 }
 
+/** Plage horaire (créneau) du référentiel de la structure. */
+export interface TimeSlot {
+  id: string;
+  name: string;
+  startHour: string;
+  endHour: string;
+}
+
 async function json<T>(res: Response): Promise<T> {
   if (!res.ok) throw new Error(String(res.status));
   const text = await res.text();
@@ -60,6 +68,12 @@ export const getPeriodeTypes = async (): Promise<PeriodeType[]> =>
 export const getSchoolYear = async (structureId: string): Promise<SchoolYear | null> =>
   json<SchoolYear>(await fetch(`/viescolaire/settings/periode?structure=${structureId}`, base)).catch(() => null);
 
+/** Plages horaires (créneaux) de la structure, triées par heure de début. */
+export const getTimeSlots = async (structureId: string): Promise<TimeSlot[]> =>
+  json<TimeSlot[]>(await fetch(`/edt/time-slots?structureId=${structureId}`, base))
+    .then((arr) => [...arr].sort((a, b) => (a.startHour || '').localeCompare(b.startHour || '')))
+    .catch(() => []);
+
 /** Matières de l'établissement (issues de l'EDT). */
 export const getMatieres = async (structureId: string): Promise<Matiere[]> =>
   json<Array<{ id: string; name: string }>>(
@@ -76,6 +90,7 @@ export const api = {
   getPeriodes,
   getPeriodeTypes,
   getSchoolYear,
+  getTimeSlots,
   getMatieres,
   getClasses,
 };
