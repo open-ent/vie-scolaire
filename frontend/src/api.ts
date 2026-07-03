@@ -14,8 +14,10 @@ export interface Periode {
 
 export interface PeriodeType {
   id: number;
+  /** Famille de découpage : 1 = année, 2 = semestre, 3 = trimestre. */
+  type?: number;
+  ordre?: number;
   libelle?: string;
-  type?: string;
 }
 
 export interface Matiere {
@@ -26,6 +28,15 @@ export interface Matiere {
 export interface Classe {
   id: string;
   name: string;
+}
+
+/** Année scolaire de la structure (settings/periode, code = YEAR). */
+export interface SchoolYear {
+  id: number;
+  start_date?: string;
+  end_date?: string;
+  code?: string;
+  is_opening?: boolean;
 }
 
 async function json<T>(res: Response): Promise<T> {
@@ -45,6 +56,10 @@ export const getPeriodes = async (structureId: string): Promise<Periode[]> =>
 export const getPeriodeTypes = async (): Promise<PeriodeType[]> =>
   json<PeriodeType[]>(await fetch(`/viescolaire/periodes/types`, base));
 
+/** Année scolaire de la structure (bornes + code). */
+export const getSchoolYear = async (structureId: string): Promise<SchoolYear | null> =>
+  json<SchoolYear>(await fetch(`/viescolaire/settings/periode?structure=${structureId}`, base)).catch(() => null);
+
 /** Matières de l'établissement (issues de l'EDT). */
 export const getMatieres = async (structureId: string): Promise<Matiere[]> =>
   json<Array<{ id: string; name: string }>>(
@@ -60,6 +75,7 @@ export const getClasses = async (structureId: string): Promise<Classe[]> =>
 export const api = {
   getPeriodes,
   getPeriodeTypes,
+  getSchoolYear,
   getMatieres,
   getClasses,
 };
