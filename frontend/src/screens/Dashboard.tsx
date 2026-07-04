@@ -19,10 +19,14 @@ export function Dashboard() {
   const matieresQuery = useQuery({ queryKey: ['viesco', 'matieres', structureId], queryFn: () => api.getMatieres(structureId), enabled: !!structureId });
   const classesQuery = useQuery({ queryKey: ['viesco', 'classes', structureId], queryFn: () => api.getClasses(structureId), enabled: !!structureId });
 
-  // Table type de période -> libellé (l'API /periodes/types renvoie id + type + ordre).
+  // Table id de type de période -> libellé. L'API /periodes/types renvoie {id, type, ordre}
+  // sans libellé : le libellé se déduit de la famille (2 = semestre, 3 = trimestre) + ordre.
   const typeLabels = useMemo(() => {
     const m = new Map<number, string>();
-    for (const ty of typesQuery.data ?? []) m.set(ty.id, ty.libelle ?? `Période ${ty.id}`);
+    for (const ty of typesQuery.data ?? []) {
+      const famille = ty.type === 2 ? 'Semestre' : ty.type === 3 ? 'Trimestre' : 'Période';
+      m.set(ty.id, ty.libelle ?? `${famille} ${ty.ordre ?? ty.id}`);
+    }
     return m;
   }, [typesQuery.data]);
 
@@ -94,7 +98,7 @@ export function Dashboard() {
               <tbody>
                 {periodes.map((p) => (
                   <tr key={p.id}>
-                    <td>{periodeLabel(p.type ?? p.id_type, typeLabels)}</td>
+                    <td>{periodeLabel(p.id_type ?? p.type, typeLabels)}</td>
                     <td>{formatDate(p.timestamp_dt)}</td>
                     <td>{formatDate(p.timestamp_fn)}</td>
                   </tr>
