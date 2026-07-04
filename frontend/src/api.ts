@@ -47,13 +47,46 @@ export interface TimeSlot {
   endHour: string;
 }
 
+/** Élève (annuaire de la structure). */
+export interface Eleve {
+  id: string;
+  displayName: string;
+}
+
+/** Commentaire de mémento. */
+export interface MementoComment {
+  id?: number;
+  comment: string;
+  owner_name?: string;
+  created?: string;
+}
+
+/** Fiche mémento d'un élève. */
+export interface Memento {
+  id: string;
+  name: string;
+  birth_date?: string;
+  accommodation?: string;
+  transport?: boolean;
+  classes?: string[];
+  comment?: string;
+  comments?: MementoComment[];
+  relatives?: Array<{ displayName?: string; name?: string; mobile?: string; phone?: string }>;
+}
+
 async function json<T>(res: Response): Promise<T> {
   if (!res.ok) throw new Error(String(res.status));
   const text = await res.text();
   return (text ? JSON.parse(text) : null) as T;
 }
 
+function xsrfHeader(): Record<string, string> {
+  const m = typeof document !== 'undefined' ? document.cookie.match(/XSRF-TOKEN=([^;]+)/) : null;
+  return m ? { 'X-XSRF-TOKEN': decodeURIComponent(m[1]) } : {};
+}
+
 const base = { credentials: 'include' as const };
+const mutHeaders = () => ({ 'Content-Type': 'application/json', ...xsrfHeader() });
 
 // ── Référentiel (lecture seule) ────────────────────────────────────────────────
 /** Périodes scolaires de l'établissement. */
@@ -86,6 +119,33 @@ export const getClasses = async (structureId: string): Promise<Classe[]> =>
     await fetch(`/viescolaire/classes?idEtablissement=${structureId}`, base),
   ).then((arr) => arr.map((c) => ({ id: c.id, name: c.name })));
 
+// ── Mémento (fiche élève + commentaires) — nécessite droit vie scolaire / ADML ────
+/** Élèves de la structure (annuaire), triés par nom. */
+export const getStudents = async (structureId: string): Promise<Eleve[]> =>
+  json<Array<{ id: string; type?: string; displayName?: string }>>(
+    await fetch(`/directory/structure/${structureId}/users`, base),
+  ).then((arr) =>
+    arr
+      .filter((u) => u.type === 'Student')
+      .map((u) => ({ id: u.id, displayName: u.displayName ?? u.id }))
+      .sort((a, b) => a.displayName.localeCompare(b.displayName, 'fr', { sensitivity: 'base' })),
+  );
+
+/** Fiche mémento d'un élève. */
+export const getMemento = async (studentId: string): Promise<Memento> =>
+  json<Memento>(await fetch(`/viescolaire/memento/students/${studentId}`, base));
+
+/** Ajoute un commentaire au mémento d'un élève. */
+export const addMementoComment = async (studentId: string, comment: string): Promise<void> => {
+  const res = await fetch(`/viescolaire/memento/students/${studentId}/comments`, {
+    ...base,
+    method: 'POST',
+    headers: mutHeaders(),
+    body: JSON.stringify({ comment }),
+  });
+  if (!res.ok) throw new Error(String(res.status));
+};
+
 export const api = {
   getPeriodes,
   getPeriodeTypes,
@@ -93,4 +153,7 @@ export const api = {
   getTimeSlots,
   getMatieres,
   getClasses,
+  getStudents,
+  getMemento,
+  addMementoComment,
 };
