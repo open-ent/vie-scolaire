@@ -32,6 +32,16 @@ export function byName<T extends { name: string }>(a: T, b: T): number {
   return a.name.localeCompare(b.name, 'fr', { sensitivity: 'base' });
 }
 
+/** Résout un identifiant en libellé via une table, ou renvoie l'identifiant brut en repli. */
+export function resolveName(id: string, table: Map<string, string>): string {
+  return table.get(id) ?? id;
+}
+
+/** Comparateur alphabétique FR sur une chaîne (insensible casse/accents). */
+export function compareFr(a: string, b: string): number {
+  return a.localeCompare(b, 'fr', { sensitivity: 'base' });
+}
+
 /** Bornes d'une période du découpage (dates « YYYY-MM-DD »). */
 export interface DecoupagePeriode {
   timestamp_dt: string;

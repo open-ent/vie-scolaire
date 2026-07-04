@@ -4,6 +4,7 @@ import { Dashboard } from './screens/Dashboard';
 import { Memento } from './screens/Memento';
 import { Periodes } from './screens/Periodes';
 import { Root } from './screens/Root';
+import { Services } from './screens/Services';
 import { Trombinoscope } from './screens/Trombinoscope';
 
 export const routes: RouteObject[] = [
@@ -13,6 +14,7 @@ export const routes: RouteObject[] = [
     children: [
       { index: true, element: <Dashboard /> },
       { path: 'periodes', element: <Periodes /> },
+      { path: 'services', element: <Services /> },
       { path: 'memento', element: <Memento /> },
       { path: 'trombinoscope', element: <Trombinoscope /> },
     ],

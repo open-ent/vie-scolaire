@@ -33,6 +33,7 @@ export function Root() {
             <nav className="btn-group mb-16" aria-label="Navigation vie scolaire">
               {tab('/', 'Référentiel', true)}
               {tab('/periodes', 'Périodes')}
+              {tab('/services', 'Services')}
               {tab('/memento', 'Mémento')}
               {tab('/trombinoscope', 'Trombinoscope')}
             </nav>

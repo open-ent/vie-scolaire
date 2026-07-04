@@ -119,6 +119,40 @@ export const getClasses = async (structureId: string): Promise<Classe[]> =>
     await fetch(`/viescolaire/classes?idEtablissement=${structureId}`, base),
   ).then((arr) => arr.map((c) => ({ id: c.id, name: c.name })));
 
+/** Un service d'enseignement : qui enseigne quelle matière à quel groupe, et comment. */
+export interface Service {
+  id_groupe: string;
+  id_enseignant: string;
+  id_matiere: string;
+  modalite?: string;
+  evaluable?: boolean;
+  coefficient?: number;
+  typeGroupe?: string;
+  is_visible?: boolean;
+  is_manual?: boolean;
+}
+
+/** Enseignant (annuaire), pour résoudre id_enseignant → nom. */
+export interface Enseignant {
+  id: string;
+  displayName: string;
+}
+
+/** Services d'enseignement de l'établissement (matière × enseignant × groupe). */
+export const getServices = async (structureId: string): Promise<Service[]> =>
+  json<Service[]>(await fetch(`/viescolaire/services?idEtablissement=${structureId}`, base)).catch(() => []);
+
+/** Enseignants de la structure (annuaire), triés par nom — pour résoudre les services. */
+export const getTeachers = async (structureId: string): Promise<Enseignant[]> =>
+  json<Array<{ id: string; type?: string; displayName?: string }>>(
+    await fetch(`/directory/structure/${structureId}/users`, base),
+  ).then((arr) =>
+    arr
+      .filter((u) => u.type === 'Teacher')
+      .map((u) => ({ id: u.id, displayName: u.displayName ?? u.id }))
+      .sort((a, b) => a.displayName.localeCompare(b.displayName, 'fr', { sensitivity: 'base' })),
+  ).catch(() => []);
+
 // ── Mémento (fiche élève + commentaires) — nécessite droit vie scolaire / ADML ────
 /** Élèves de la structure (annuaire), triés par nom. */
 export const getStudents = async (structureId: string): Promise<Eleve[]> =>
@@ -184,6 +218,8 @@ export const api = {
   getMatieres,
   getClasses,
   getStudents,
+  getServices,
+  getTeachers,
   getMemento,
   addMementoComment,
   updatePeriodes,

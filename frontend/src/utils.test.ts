@@ -1,6 +1,20 @@
 import { describe, expect, it } from 'vitest';
 
-import { byName, decoupageAnnee, formatDate, periodeLabel, ymd } from './utils';
+import { byName, compareFr, decoupageAnnee, formatDate, periodeLabel, resolveName, ymd } from './utils';
+
+describe('resolveName', () => {
+  const table = new Map([['a', 'Alpha'], ['b', 'Bravo']]);
+  it('résout via la table, repli sur l’id brut', () => {
+    expect(resolveName('a', table)).toBe('Alpha');
+    expect(resolveName('z', table)).toBe('z');
+  });
+});
+
+describe('compareFr', () => {
+  it('trie insensible casse/accents', () => {
+    expect(['Éveil', 'anglais', 'Biologie'].sort(compareFr)).toEqual(['anglais', 'Biologie', 'Éveil']);
+  });
+});
 
 describe('ymd', () => {
   it('formate en YYYY-MM-DD', () => {
