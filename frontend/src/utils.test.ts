@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { byName, formatDate, periodeLabel, ymd } from './utils';
+import { byName, decoupageAnnee, formatDate, periodeLabel, ymd } from './utils';
 
 describe('ymd', () => {
   it('formate en YYYY-MM-DD', () => {
@@ -35,6 +35,39 @@ describe('periodeLabel', () => {
   });
   it('gère l’absence de type', () => {
     expect(periodeLabel(undefined, labels)).toBe('—');
+  });
+});
+
+describe('decoupageAnnee', () => {
+  const start = '2025-09-01';
+  const end = '2026-07-05';
+
+  it('produit exactement nb périodes', () => {
+    expect(decoupageAnnee(3, start, end)).toHaveLength(3);
+    expect(decoupageAnnee(2, start, end)).toHaveLength(2);
+  });
+
+  it('borne la 1re période au début et la dernière à la fin de l’année', () => {
+    const p = decoupageAnnee(3, start, end);
+    expect(p[0].timestamp_dt).toBe('2025-09-01');
+    expect(p[2].timestamp_fn).toBe('2026-07-05');
+  });
+
+  it('enchaîne les périodes sans trou (fin d’une < début de la suivante)', () => {
+    const p = decoupageAnnee(2, start, end);
+    expect(p[0].timestamp_fn < p[1].timestamp_dt).toBe(true);
+  });
+
+  it('aligne fin de saisie et conseil sur la fin de période, bulletin non publié par défaut', () => {
+    const p = decoupageAnnee(3, start, end);
+    expect(p[0].date_fin_saisie).toBe(p[0].timestamp_fn);
+    expect(p[0].date_conseil_classe).toBe(p[0].timestamp_fn);
+    expect(p[0].publication_bulletin).toBe(false);
+  });
+
+  it('renvoie un tableau vide si l’année est inconnue', () => {
+    expect(decoupageAnnee(3, undefined, end)).toEqual([]);
+    expect(decoupageAnnee(3, start, undefined)).toEqual([]);
   });
 });
 

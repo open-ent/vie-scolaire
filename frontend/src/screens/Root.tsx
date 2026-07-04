@@ -32,6 +32,7 @@ export function Root() {
           <div className="container py-16">
             <nav className="btn-group mb-16" aria-label="Navigation vie scolaire">
               {tab('/', 'Référentiel', true)}
+              {tab('/periodes', 'Périodes')}
               {tab('/memento', 'Mémento')}
               {tab('/trombinoscope', 'Trombinoscope')}
             </nav>

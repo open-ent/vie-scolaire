@@ -31,3 +31,39 @@ export function periodeLabel(type: number | undefined, labels: Map<number, strin
 export function byName<T extends { name: string }>(a: T, b: T): number {
   return a.name.localeCompare(b.name, 'fr', { sensitivity: 'base' });
 }
+
+/** Bornes d'une période du découpage (dates « YYYY-MM-DD »). */
+export interface DecoupagePeriode {
+  timestamp_dt: string;
+  timestamp_fn: string;
+  date_fin_saisie: string;
+  date_conseil_classe: string;
+  publication_bulletin: boolean;
+}
+
+/**
+ * Découpe l'année scolaire [start, end] en `nb` périodes de durée égale.
+ * Pour chaque période : début/fin calculés, fin de saisie & conseil de classe alignés sur la fin.
+ * Sert de proposition par défaut, éditable ensuite dans le formulaire.
+ */
+export function decoupageAnnee(nb: number, start?: string, end?: string): DecoupagePeriode[] {
+  const s = start ? new Date(start) : null;
+  const e = end ? new Date(end) : null;
+  if (!s || !e || Number.isNaN(s.getTime()) || Number.isNaN(e.getTime()) || nb < 1) return [];
+  const total = e.getTime() - s.getTime();
+  const step = total / nb;
+  const out: DecoupagePeriode[] = [];
+  for (let i = 0; i < nb; i += 1) {
+    const dt = new Date(s.getTime() + step * i);
+    const fn = new Date(i === nb - 1 ? e.getTime() : s.getTime() + step * (i + 1) - 86400000);
+    const fin = ymd(fn);
+    out.push({
+      timestamp_dt: ymd(dt),
+      timestamp_fn: fin,
+      date_fin_saisie: fin,
+      date_conseil_classe: fin,
+      publication_bulletin: false,
+    });
+  }
+  return out;
+}

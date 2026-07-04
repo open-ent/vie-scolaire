@@ -131,6 +131,36 @@ export const getStudents = async (structureId: string): Promise<Eleve[]> =>
       .sort((a, b) => a.displayName.localeCompare(b.displayName, 'fr', { sensitivity: 'base' })),
   );
 
+// ── Paramétrage des périodes (découpage trimestre/semestre par classe) — ADML ─────
+/** Une période à écrire (découpage). Dates au format « yyyy-MM-dd ». */
+export interface PeriodeSaisie {
+  timestamp_dt: string;
+  timestamp_fn: string;
+  date_fin_saisie: string;
+  date_conseil_classe: string;
+  publication_bulletin: boolean;
+}
+
+/**
+ * Enregistre le découpage des périodes pour un ensemble de classes.
+ * Le backend déduit le type (2 = semestres, 3 = trimestres…) du **nombre** de périodes.
+ * PUT /viescolaire/periodes {idEtablissement, idClasses[], periodes[]}.
+ */
+export const updatePeriodes = async (
+  structureId: string,
+  idClasses: string[],
+  periodes: PeriodeSaisie[],
+): Promise<void> => {
+  // Le ResourceFilter AdminRightStructure lit la structure dans les query params (pas le body).
+  const res = await fetch(`/viescolaire/periodes?idEtablissement=${structureId}`, {
+    ...base,
+    method: 'PUT',
+    headers: mutHeaders(),
+    body: JSON.stringify({ idEtablissement: structureId, idClasses, periodes }),
+  });
+  if (!res.ok) throw new Error(String(res.status));
+};
+
 /** Fiche mémento d'un élève. */
 export const getMemento = async (studentId: string): Promise<Memento> =>
   json<Memento>(await fetch(`/viescolaire/memento/students/${studentId}`, base));
@@ -156,4 +186,5 @@ export const api = {
   getStudents,
   getMemento,
   addMementoComment,
+  updatePeriodes,
 };
