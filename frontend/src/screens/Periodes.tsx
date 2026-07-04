@@ -111,7 +111,7 @@ export function Periodes() {
                     <th>{t('viescolaire.periodes.end', { defaultValue: 'Fin' })}</th>
                     <th>{t('viescolaire.periodes.saisie', { defaultValue: 'Fin de saisie' })}</th>
                     <th>{t('viescolaire.periodes.conseil', { defaultValue: 'Conseil de classe' })}</th>
-                    <th>{t('viescolaire.periodes.publi', { defaultValue: 'Bulletin publié' })}</th>
+                    <th>{t('viescolaire.periodes.publi', { defaultValue: 'Visibilité des bulletins aux parents' })}</th>
                   </tr>
                 </thead>
                 <tbody>
