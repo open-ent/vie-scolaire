@@ -26,6 +26,8 @@ describe('formatDate', () => {
   it('convertit ISO en jj/mm/aaaa', () => {
     expect(formatDate('2026-09-15')).toBe('15/09/2026');
     expect(formatDate('2026-09-15T00:00:00')).toBe('15/09/2026');
+    // Périodes d'exclusion : format backend avec millisecondes.
+    expect(formatDate('2025-11-01T00:00:00.000')).toBe('01/11/2025');
   });
   it('conserve un format jj/mm/aaaa déjà fourni', () => {
     expect(formatDate('01/09/2026')).toBe('01/09/2026');

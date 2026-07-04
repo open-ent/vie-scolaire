@@ -34,6 +34,8 @@ export function Root() {
               {tab('/', 'Référentiel', true)}
               {tab('/periodes', 'Périodes')}
               {tab('/services', 'Services')}
+              {tab('/regroupements', 'Regroupements')}
+              {tab('/exclusions', 'Exclusions')}
               {tab('/memento', 'Mémento')}
               {tab('/trombinoscope', 'Trombinoscope')}
             </nav>

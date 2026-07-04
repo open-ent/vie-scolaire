@@ -210,6 +210,46 @@ export const addMementoComment = async (studentId: string, comment: string): Pro
   if (!res.ok) throw new Error(String(res.status));
 };
 
+// ── Regroupements (groupings de classes/groupes) ─────────────────────────────────
+/** Un regroupement de classes/groupes. */
+export interface Grouping {
+  id: string;
+  name: string;
+  divisions: Array<{ id: string; name: string }>;
+}
+
+/** Regroupements de la structure (GET /grouping/structure/:id/list). */
+export const getGroupings = async (structureId: string): Promise<Grouping[]> =>
+  json<Array<{ id: string; name: string; student_divisions?: Array<{ id: string; name: string }> }>>(
+    await fetch(`/viescolaire/grouping/structure/${structureId}/list`, base),
+  )
+    .then((arr) => (arr ?? []).map((g) => ({ id: g.id, name: g.name, divisions: g.student_divisions ?? [] })))
+    .catch(() => []);
+
+/** Crée un regroupement (POST /grouping/structure/:id). */
+export const createGrouping = async (structureId: string, name: string): Promise<{ id: string }> =>
+  json<{ id: string }>(
+    await fetch(`/viescolaire/grouping/structure/${structureId}`, { ...base, method: 'POST', headers: mutHeaders(), body: JSON.stringify({ name }) }),
+  );
+
+// ── Périodes d'exclusion (jours sans cours / vacances) ───────────────────────────
+/** Une période d'exclusion (jour férié, vacances…). */
+export interface Exclusion {
+  id: number;
+  startDate: string;
+  endDate: string;
+  description: string;
+  isOpening: boolean;
+}
+
+/** Périodes d'exclusion de la structure (GET /settings/periodes/exclusions). */
+export const getExclusions = async (structureId: string): Promise<Exclusion[]> =>
+  json<Array<{ id: number; start_date?: string; end_date?: string; description?: string; is_opening?: boolean }>>(
+    await fetch(`/viescolaire/settings/periodes/exclusions?structureId=${structureId}`, base),
+  )
+    .then((arr) => (arr ?? []).map((e) => ({ id: e.id, startDate: e.start_date ?? '', endDate: e.end_date ?? '', description: e.description ?? '', isOpening: Boolean(e.is_opening) })))
+    .catch(() => []);
+
 export const api = {
   getPeriodes,
   getPeriodeTypes,
@@ -223,4 +263,7 @@ export const api = {
   getMemento,
   addMementoComment,
   updatePeriodes,
+  getGroupings,
+  createGrouping,
+  getExclusions,
 };

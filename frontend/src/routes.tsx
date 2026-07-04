@@ -1,8 +1,10 @@
 import { RouteObject, createHashRouter } from 'react-router-dom';
 
 import { Dashboard } from './screens/Dashboard';
+import { Exclusions } from './screens/Exclusions';
 import { Memento } from './screens/Memento';
 import { Periodes } from './screens/Periodes';
+import { Regroupements } from './screens/Regroupements';
 import { Root } from './screens/Root';
 import { Services } from './screens/Services';
 import { Trombinoscope } from './screens/Trombinoscope';
@@ -15,6 +17,8 @@ export const routes: RouteObject[] = [
       { index: true, element: <Dashboard /> },
       { path: 'periodes', element: <Periodes /> },
       { path: 'services', element: <Services /> },
+      { path: 'regroupements', element: <Regroupements /> },
+      { path: 'exclusions', element: <Exclusions /> },
       { path: 'memento', element: <Memento /> },
       { path: 'trombinoscope', element: <Trombinoscope /> },
     ],
