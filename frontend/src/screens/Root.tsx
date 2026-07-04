@@ -39,6 +39,13 @@ export function Root() {
               {tab('/memento', 'Mémento')}
               {tab('/trombinoscope', 'Trombinoscope')}
             </nav>
+            {/* Passerelles vers les paramétrages des modules liés (parité onglets Angular
+                COMPÉTENCES / PRESENCES / CAHIER DE TEXTE — modules migrés, liens directs). */}
+            <nav className="d-flex gap-8 mb-16 flex-wrap" aria-label="Modules liés">
+              <a className="btn btn-secondary btn-sm" href="/competences?ui=react">Compétences</a>
+              <a className="btn btn-secondary btn-sm" href="/presences?ui=react#/parametrage">Présences</a>
+              <a className="btn btn-secondary btn-sm" href="/diary?ui=react">Cahier de textes</a>
+            </nav>
             <Outlet />
           </div>
         </div>
