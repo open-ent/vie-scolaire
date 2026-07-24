@@ -34,17 +34,31 @@ jobs:
       # vsco_personnel.html rendu par DisplayController) + les bundles JS
       # (public/dist, public/js/behaviours.js) et le CSS (public/css).
       # Sans cette etape le fat-jar a "view/: 0" et GET /viescolaire renvoie 500.
-      # Build frontend Angular (gulp + sass). tsconfig racine exclut desormais frontend/ ->
-      # ts-loader ne tente plus de compiler les .tsx React (sinon TS2307 Cannot find module 'react').
-      # NB : le bundle React (Vite, frontend/) n'est PAS construit ici -> meme convention que les
-      # autres modules duaux (rbs, edt, cahier-de-textes...) dont la CI ne build que gulp.
-      - name: Build frontend (gulp + sass)
+      # IHM Angular (gulp) : bundle public/dist/vsco_personnels.js + shell view/. tsconfig racine
+      # exclut frontend/ -> ts-loader ne compile plus les .tsx React (sinon TS2307).
+      - name: Build frontend Angular (gulp + sass)
         run: |
           pnpm install --frozen-lockfile || pnpm install
           node node_modules/gulp/bin/gulp.js build
           pnpm run build:sass
-      - name: Verifier la presence du shell view/
-        run: test -f src/main/resources/view/viescolaire/vsco_personnel.html
+      # IHM React (vsco_react.html -> /viescolaire/public/index.js) : sous-projet Vite frontend/,
+      # paquets prives @open-ent -> auth via OPENENT_PACKAGES_TOKEN (frontend/.npmrc). Copie
+      # dist/public -> resources/public. Fat-mod complet (Angular + React), commutation ?ui=. [B]
+      - name: Build frontend React (sous-projet Vite frontend/)
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.OPENENT_PACKAGES_TOKEN }}
+        run: |
+          cd frontend
+          pnpm install --no-frozen-lockfile
+          pnpm build
+          mkdir -p ../src/main/resources/public
+          cp -r dist/public/. ../src/main/resources/public/
+      - name: Verifier les deux bundles (Angular + React)
+        run: |
+          test -f src/main/resources/public/dist/vsco_personnels.js       || { echo "::error::bundle Angular manquant"; exit 1; }
+          test -f src/main/resources/public/index.js                      || { echo "::error::bundle React manquant"; exit 1; }
+          test -f src/main/resources/view/viescolaire/vsco_personnel.html || { echo "::error::vue Angular manquante"; exit 1; }
+          test -f src/main/resources/view/viescolaire/vsco_react.html     || { echo "::error::vue React manquante"; exit 1; }
       - name: Configure Maven pour GitHub Packages
         run: |
           mkdir -p ~/.m2

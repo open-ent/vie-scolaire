@@ -16,11 +16,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Build frontend Angular (gulp 3.9 sous Node 10). tsconfig racine exclut frontend/ ->
-      # ts-loader ne compile plus les .tsx React (sinon TS2307 Cannot find module 'react').
-      # Le bundle React (Vite) n'est PAS construit ici : meme convention gulp-only que les
-      # autres modules duaux (rbs, edt, cahier-de-textes...).
-      - name: Build frontend (Gulp via Node 10 en Docker)
+      # IHM Angular (gulp 3.9 sous Node 10). tsconfig racine exclut frontend/ -> ts-loader ne
+      # compile plus les .tsx React (sinon TS2307 Cannot find module 'react').
+      - name: Build frontend Angular (Gulp via Node 10 en Docker)
         run: |
           docker run --rm \
             -v "${{ github.workspace }}:/workspace" \
@@ -28,6 +26,28 @@ jobs:
             --user root \
             opendigitaleducation/node:10-alpine \
             sh -c "npm install --legacy-peer-deps && node_modules/gulp/bin/gulp.js build"
+
+      # IHM React (vsco_react.html -> /viescolaire/public/index.js) : sous-projet Vite frontend/
+      # (Node 20), paquets prives @open-ent -> auth OPENENT_PACKAGES_TOKEN. Copie vers resources. [B]
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - name: Build frontend React (sous-projet Vite frontend/)
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.OPENENT_PACKAGES_TOKEN }}
+        run: |
+          cd frontend
+          pnpm install --no-frozen-lockfile
+          pnpm build
+          mkdir -p ../src/main/resources/public
+          cp -r dist/public/. ../src/main/resources/public/
+      - name: Verifier les deux bundles (Angular + React)
+        run: |
+          test -f src/main/resources/public/dist/vsco_personnels.js       || { echo "::error::bundle Angular manquant"; exit 1; }
+          test -f src/main/resources/public/index.js                      || { echo "::error::bundle React manquant"; exit 1; }
 
       - uses: actions/setup-java@v4
         with:
