@@ -34,31 +34,15 @@ jobs:
       # vsco_personnel.html rendu par DisplayController) + les bundles JS
       # (public/dist, public/js/behaviours.js) et le CSS (public/css).
       # Sans cette etape le fat-jar a "view/: 0" et GET /viescolaire renvoie 500.
-      # IHM Angular (gulp) : bundle public/dist/vsco_personnels.js + shell view/. tsconfig racine
-      # exclut frontend/ -> ts-loader ne compile plus les .tsx React (sinon TS2307).
       - name: Build frontend Angular (gulp + sass)
         run: |
           pnpm install --frozen-lockfile || pnpm install
           node node_modules/gulp/bin/gulp.js build
           pnpm run build:sass
-      # IHM React (vsco_react.html -> /viescolaire/public/index.js) : sous-projet Vite frontend/,
-      # paquets prives @open-ent -> auth via OPENENT_PACKAGES_TOKEN (frontend/.npmrc). Copie
-      # dist/public -> resources/public. Fat-mod complet (Angular + React), commutation ?ui=. [B]
-      - name: Build frontend React (sous-projet Vite frontend/)
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.OPENENT_PACKAGES_TOKEN }}
-        run: |
-          cd frontend
-          pnpm install --no-frozen-lockfile
-          pnpm build
-          mkdir -p ../src/main/resources/public
-          cp -r dist/public/. ../src/main/resources/public/
-      - name: Verifier les deux bundles (Angular + React)
+      - name: Verifier le bundle Angular
         run: |
           test -f src/main/resources/public/dist/vsco_personnels.js       || { echo "::error::bundle Angular manquant"; exit 1; }
-          test -f src/main/resources/public/index.js                      || { echo "::error::bundle React manquant"; exit 1; }
           test -f src/main/resources/view/viescolaire/vsco_personnel.html || { echo "::error::vue Angular manquante"; exit 1; }
-          test -f src/main/resources/view/viescolaire/vsco_react.html     || { echo "::error::vue React manquante"; exit 1; }
       - name: Configure Maven pour GitHub Packages
         run: |
           mkdir -p ~/.m2
@@ -114,10 +98,6 @@ jobs:
           echo "Publishing ${GROUP_ID}:${ARTIFACT_ID}:${VERSION}:fat -> GitHub Packages"
           ( cd /tmp && mvn deploy:deploy-file -Dfile="${FAT_ABS}" -DgroupId="${GROUP_ID}" -DartifactId="${ARTIFACT_ID}" -Dversion="${VERSION}" -Dclassifier=fat -Dpackaging=jar -DrepositoryId=github -Durl="https://maven.pkg.github.com/${{ github.repository }}" -B ) || true
 
-      # Publication rct-nexus RÉACTIVÉE : depuis [B], la CI construit le bundle React (frontend/
-      # Vite) dans le fat-mod -> jar COMPLET (Angular vsco_personnels.js + React index.js).
-      # Republier sur maven-releases ne cause plus de regression ?ui=react. Sur -patched-dev, ce
-      # step republie donc un jar complet = restauration auto de l'artefact clobbé précédemment.
       - name: Publish fat JAR to rct-nexus
         continue-on-error: true
         if: startsWith(github.ref, 'refs/tags/') || endsWith(github.ref, '-patched') || endsWith(github.ref, '-patched-dev')
