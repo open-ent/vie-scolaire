@@ -57,9 +57,9 @@ public class ServicesHelper {
             if (overwrittenService != null) {
                 SQLServices.remove(overwrittenService);
                 service.setModalite(overwrittenService.getString("modalite"));
-                service.setEvaluable(overwrittenService.getBoolean("evaluable"));
-                service.setCoefficient(overwrittenService.getLong(COEFFICIENT));
-                service.setVisible(overwrittenService.getBoolean("is_visible"));
+                service.setEvaluable(overwrittenService.getBoolean("evaluable", false));
+                service.setCoefficient(overwrittenService.getLong(COEFFICIENT, 1L));
+                service.setVisible(overwrittenService.getBoolean("is_visible", true));
             }
 
             List<ServiceModel> newServices = service.addCoteachers(coTeachersList);
@@ -76,9 +76,9 @@ public class ServicesHelper {
             manualService.setIdTeacher(oParamService.getString("id_enseignant"));
             manualService.setIdGroup(oParamService.getString("id_groupe"));
             manualService.setModalite(oParamService.getString("modalite"));
-            manualService.setEvaluable(oParamService.getBoolean("evaluable"));
-            manualService.setCoefficient(oParamService.getLong(COEFFICIENT));
-            manualService.setVisible(oParamService.getBoolean("is_visible"));
+            manualService.setEvaluable(oParamService.getBoolean("evaluable", false));
+            manualService.setCoefficient(oParamService.getLong(COEFFICIENT, 1L));
+            manualService.setVisible(oParamService.getBoolean("is_visible", true));
             manualService.setId_groups(compressed);
 
             manualService.setManual(true);
