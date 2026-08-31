@@ -18,6 +18,7 @@
   "average.calculated": "Moyenne calculée",
   "back": "Retour",
   "cdt.create.homework.type": "Créer un type",
+  "cdt.audience.settings.title": "Cahier de textes par classe/groupe",
   "cdt.data.init": "Initilisation des données",
   "cdt.data.init.are": "Les données suivantes seront initialisées",
   "cdt.data.init.error": "Une erreur est survenue lors de l'initialisation des données",

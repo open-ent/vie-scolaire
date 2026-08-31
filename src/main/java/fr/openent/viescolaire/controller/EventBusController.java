@@ -643,9 +643,19 @@ public class EventBusController extends ControllerHelper {
                     oService.put("id_matiere", aIdMatiere);
                 }
 
-                oService.put("evaluable", bEvaluable);
+                if (bEvaluable != null) {
+                    oService.put("evaluable", bEvaluable);
+                }
 
                 servicesService.getServicesSQL(idStructure, oService, getJsonArrayBusResultHandler(message));
+            }
+            break;
+            case "getAllServices": {
+                // Contrairement à "getServices" (table SQL "services" seule, services ajustés
+                // manuellement), combine aussi les affectations dérivées de Neo4j (relations
+                // TEACHES) — même source que l'API REST GET /viescolaire/services.
+                String idStructure = message.body().getString("idStructure");
+                servicesService.getAllServicesNoFilter(idStructure, new JsonObject(), getJsonArrayBusResultHandler(message));
             }
             break;
             case "getDefaultServices": {
