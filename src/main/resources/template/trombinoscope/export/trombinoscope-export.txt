@@ -1,0 +1,39 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Trombinoscope - {{title}}</title>
+<style>
+  body { font-family: Arial, Helvetica, sans-serif; color: #222; margin: 24px; }
+  h1 { font-size: 20px; color: #2c3e72; margin: 0 0 20px; }
+  .grid { display: flex; flex-wrap: wrap; gap: 16px; }
+  .student { width: 140px; text-align: center; }
+  .student img {
+    width: 120px; height: 120px; object-fit: cover; border-radius: 8px;
+    border: 1px solid #ddd; background: #f0f0f0;
+  }
+  .placeholder {
+    width: 120px; height: 120px; border-radius: 8px; border: 1px solid #ddd;
+    background: #f0f0f0; display: flex; align-items: center; justify-content: center;
+    font-size: 32px; color: #999; margin: 0 auto;
+  }
+  .name { margin-top: 6px; font-size: 13px; }
+</style>
+</head>
+<body>
+<h1>Trombinoscope - {{title}}</h1>
+<div class="grid">
+{{#students}}
+  <div class="student">
+    {{#photoBase64Uri}}
+    <img src="{{photoBase64Uri}}" alt="{{firstName}} {{lastName}}"/>
+    {{/photoBase64Uri}}
+    {{^photoBase64Uri}}
+    <div class="placeholder">{{initial}}</div>
+    {{/photoBase64Uri}}
+    <div class="name">{{firstName}} {{lastName}}</div>
+  </div>
+{{/students}}
+</div>
+</body>
+</html>

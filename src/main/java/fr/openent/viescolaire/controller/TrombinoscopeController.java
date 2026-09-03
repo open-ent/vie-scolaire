@@ -9,9 +9,13 @@ import fr.openent.viescolaire.model.Trombinoscope.TrombinoscopeFailure;
 import fr.openent.viescolaire.model.Trombinoscope.TrombinoscopeReport;
 import fr.openent.viescolaire.security.Trombinoscope.AccessTrombinoscope;
 import fr.openent.viescolaire.security.Trombinoscope.ManageTrombinoscope;
+import fr.openent.viescolaire.service.ClasseService;
+import fr.openent.viescolaire.service.TrombinoscopeExportService;
 import fr.openent.viescolaire.service.TrombinoscopeFailureService;
 import fr.openent.viescolaire.service.TrombinoscopeReportService;
 import fr.openent.viescolaire.service.TrombinoscopeService;
+import fr.openent.viescolaire.service.impl.DefaultClasseService;
+import fr.openent.viescolaire.service.impl.DefaultTrombinoscopeExportService;
 import fr.openent.viescolaire.service.impl.DefaultTrombinoscopeFailureService;
 import fr.openent.viescolaire.service.impl.DefaultTrombinoscopeReportService;
 import fr.openent.viescolaire.service.impl.DefaultTrombinoscopeService;
@@ -33,9 +37,12 @@ import org.entcore.common.controller.ControllerHelper;
 import org.entcore.common.http.filter.ResourceFilter;
 import org.entcore.common.http.filter.Trace;
 import org.entcore.common.http.response.DefaultResponseHandler;
+import org.entcore.common.pdf.PdfFactory;
 import org.entcore.common.storage.Storage;
 
 import java.io.File;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -52,6 +59,7 @@ public class TrombinoscopeController extends ControllerHelper {
     private final TrombinoscopeFailureService failureService;
     private final TrombinoscopeService trombinoscopeService;
     private final TrombinoscopeReportService reportService;
+    private final TrombinoscopeExportService exportService;
     private Map<String, String> skins;
     private static final String ASSET_THEME = "/assets/themes/";
     private static final String IMG_ILLUSTRATION = "img/illustrations";
@@ -63,6 +71,8 @@ public class TrombinoscopeController extends ControllerHelper {
         this.failureService = new DefaultTrombinoscopeFailureService(storage);
         this.trombinoscopeService = new DefaultTrombinoscopeService(vertx.fileSystem(), storage, failureService);
         this.reportService = new DefaultTrombinoscopeReportService();
+        this.exportService = new DefaultTrombinoscopeExportService(vertx, storage, new DefaultClasseService(),
+                trombinoscopeService, new PdfFactory(vertx).getPdfGenerator());
         vertx.sharedData().<String, String>getAsyncMap("skins")
           .flatMap(AsyncMap::entries)
           .onSuccess(skins -> {
@@ -103,6 +113,69 @@ public class TrombinoscopeController extends ControllerHelper {
             Boolean isActive = activeJson.getBoolean(Field.ACTIVE, false);
             trombinoscopeService.setSetting(structureId, isActive, DefaultResponseHandler.asyncDefaultResponseHandler(request));
         });
+    }
+
+    /* EXPORT */
+
+    private static final List<String> EXPORT_SCOPES = Arrays.asList("structure", "classe", "groupe");
+    private static final List<String> EXPORT_FORMATS = Arrays.asList("html", "pdf");
+
+    @Get("/structures/:structureId/trombinoscope/export")
+    @SecuredAction(value = "", type = ActionType.RESOURCE)
+    @ResourceFilter(ManageTrombinoscope.class)
+    @ApiDoc("Export du trombinoscope (HTML ou PDF), par établissement, classe ou groupe")
+    public void exportTrombinoscope(HttpServerRequest request) {
+        String structureId = request.getParam(Field.STRUCTUREID);
+        String scope = request.getParam(Field.SCOPE);
+        String scopeId = request.getParam(Field.SCOPE_ID);
+        String scopeName = request.getParam(Field.SCOPE_NAME);
+        String format = request.getParam(Field.FORMAT);
+
+        if (scope == null || !EXPORT_SCOPES.contains(scope)) {
+            badRequest(request, "[Viescolaire@TrombinoscopeController::exportTrombinoscope] invalid scope");
+            return;
+        }
+        if (format == null || !EXPORT_FORMATS.contains(format)) {
+            badRequest(request, "[Viescolaire@TrombinoscopeController::exportTrombinoscope] invalid format");
+            return;
+        }
+        if (!"structure".equals(scope) && (scopeId == null || scopeId.isEmpty())) {
+            badRequest(request, "[Viescolaire@TrombinoscopeController::exportTrombinoscope] missing scopeId");
+            return;
+        }
+
+        String importFolder = config.getString("import-folder", "/tmp");
+
+        exportService.export(structureId, scope, scopeId, scopeName, format, importFolder)
+                .onSuccess(content -> {
+                    if ("structure".equals(scope)) {
+                        request.response()
+                                .putHeader("Content-Type", "application/zip")
+                                .putHeader("Content-Disposition", "attachment; filename=\"trombinoscope-" + structureId + ".zip\"")
+                                .end(content);
+                    } else if ("pdf".equals(format)) {
+                        request.response()
+                                .putHeader("Content-Type", "application/pdf")
+                                .putHeader("Content-Disposition", "attachment; filename=\"trombinoscope-"
+                                        + sanitizeFilenamePart(scopeName != null ? scopeName : scopeId) + ".pdf\"")
+                                .end(content);
+                    } else {
+                        request.response()
+                                .putHeader("Content-Type", "text/html; charset=UTF-8")
+                                .end(content);
+                    }
+                })
+                .onFailure(err -> {
+                    log.error("[Viescolaire@TrombinoscopeController::exportTrombinoscope] Failed to export trombinoscope", err);
+                    renderError(request, new JsonObject().put(Field.ERROR, err.getMessage()));
+                });
+    }
+
+    private String sanitizeFilenamePart(String value) {
+        if (value == null || value.isEmpty()) {
+            return "export";
+        }
+        return value.replaceAll("[^a-zA-Z0-9-_. ]", "_");
     }
 
     /* TROMBINOSCOPE */

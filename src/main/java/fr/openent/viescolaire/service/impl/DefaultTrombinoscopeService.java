@@ -540,4 +540,34 @@ public class DefaultTrombinoscopeService extends DBService implements Trombinosc
 
         return promise.future();
     }
+
+    @Override
+    public void getPicturesByStudentIds(String structureId, List<String> studentIds, Handler<AsyncResult<Map<String, String>>> handler) {
+        if (studentIds == null || studentIds.isEmpty()) {
+            handler.handle(Future.succeededFuture(new HashMap<>()));
+            return;
+        }
+
+        String placeholders = studentIds.stream().map(id -> "?").collect(Collectors.joining(","));
+        String query = " SELECT student_id, picture_id FROM " + Viescolaire.VSCO_SCHEMA + ".trombinoscope "
+                + " WHERE structure_id = ? AND student_id IN (" + placeholders + ")";
+
+        JsonArray params = new JsonArray().add(structureId);
+        studentIds.forEach(params::add);
+
+        sql.prepared(query, params, SqlResult.validResultHandler(result -> {
+            if (result.isLeft()) {
+                String message = "[Viescolaire@DefaultTrombinoscopeService::getPicturesByStudentIds] Failed to get pictures";
+                log.error(message, result.left().getValue());
+                handler.handle(Future.failedFuture(result.left().getValue()));
+                return;
+            }
+            Map<String, String> pictures = new HashMap<>();
+            for (Object row : result.right().getValue()) {
+                JsonObject picture = (JsonObject) row;
+                pictures.put(picture.getString("student_id"), picture.getString("picture_id"));
+            }
+            handler.handle(Future.succeededFuture(pictures));
+        }));
+    }
 }

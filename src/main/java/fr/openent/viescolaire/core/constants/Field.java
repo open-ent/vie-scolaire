@@ -162,6 +162,10 @@ public class Field<id_groupes> {
     public static final String FAILUREID = "failureId";
     public static final String LIMIT = "limit";
     public static final String OFFSET = "offset";
+    public static final String SCOPE = "scope";
+    public static final String SCOPE_ID = "scopeId";
+    public static final String SCOPE_NAME = "scopeName";
+    public static final String FORMAT = "format";
     public static final String CLASSNAME = "className";
     public static final String AUDIENCENAME = "audienceName";
     public static final String ID_STRUCTURE = "id_structure";
