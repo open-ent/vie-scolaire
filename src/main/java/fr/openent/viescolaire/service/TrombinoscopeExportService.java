@@ -14,8 +14,11 @@ public interface TrombinoscopeExportService {
      * @param scopeName      Display name of the class/group, used for titles and file names (optional)
      * @param format         "html" or "pdf"
      * @param tempFolderRoot Root folder used to build the temporary directory needed for the "structure" scope
+     * @param baseUrl        Scheme + host of the incoming request (e.g. "https://ent.tech.fr"), used to fetch
+     *                       a student's directory avatar as a fallback when no trombinoscope picture was imported
      * @return {@link Future} of the exported content: HTML/PDF bytes for "classe"/"groupe" scope,
      * a ZIP archive (one file per class) for "structure" scope
      */
-    Future<Buffer> export(String structureId, String scope, String scopeId, String scopeName, String format, String tempFolderRoot);
+    Future<Buffer> export(String structureId, String scope, String scopeId, String scopeName, String format,
+                          String tempFolderRoot, String baseUrl);
 }

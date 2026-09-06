@@ -145,8 +145,9 @@ public class TrombinoscopeController extends ControllerHelper {
         }
 
         String importFolder = config.getString("import-folder", "/tmp");
+        String baseUrl = Renders.getScheme(request) + "://" + Renders.getHost(request);
 
-        exportService.export(structureId, scope, scopeId, scopeName, format, importFolder)
+        exportService.export(structureId, scope, scopeId, scopeName, format, importFolder, baseUrl)
                 .onSuccess(content -> {
                     if ("structure".equals(scope)) {
                         request.response()

@@ -12,6 +12,10 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
+import io.vertx.ext.web.client.WebClient;
+import io.vertx.ext.web.client.WebClientOptions;
+import org.entcore.common.neo4j.Neo4j;
+import org.entcore.common.neo4j.Neo4jResult;
 import org.entcore.common.pdf.PdfGenerator;
 import org.entcore.common.storage.Storage;
 import org.entcore.common.utils.Zip;
@@ -19,8 +23,10 @@ import org.entcore.common.utils.Zip;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.zip.Deflater;
 
@@ -34,6 +40,8 @@ public class DefaultTrombinoscopeExportService implements TrombinoscopeExportSer
     private final TrombinoscopeService trombinoscopeService;
     private final PdfGenerator pdfGenerator;
     private final FileTemplateProcessor templateProcessor;
+    private final Neo4j neo4j = Neo4j.getInstance();
+    private final WebClient webClient;
 
     private static final String EXPORT_TEMPLATE = "trombinoscope/export/trombinoscope-export.txt";
 
@@ -46,18 +54,19 @@ public class DefaultTrombinoscopeExportService implements TrombinoscopeExportSer
         this.pdfGenerator = pdfGenerator;
         this.templateProcessor = new FileTemplateProcessor(vertx, "template/", false);
         this.templateProcessor.escapeHTML(false);
+        this.webClient = WebClient.create(vertx, new WebClientOptions().setConnectTimeout(5000));
     }
 
     @Override
     public Future<Buffer> export(String structureId, String scope, String scopeId, String scopeName, String format,
-                                 String tempFolderRoot) {
+                                 String tempFolderRoot, String baseUrl) {
         if ("structure".equals(scope)) {
-            return exportStructureZip(structureId, format, tempFolderRoot);
+            return exportStructureZip(structureId, format, tempFolderRoot, baseUrl);
         }
 
         String title = (scopeName != null && !scopeName.isEmpty()) ? scopeName : scopeId;
         return resolveStudents(scopeId)
-                .compose(students -> renderAudienceHtml(structureId, title, students))
+                .compose(students -> renderAudienceHtml(structureId, title, students, baseUrl))
                 .compose(html -> "pdf".equals(format) ? toPdf(title, html) : Future.succeededFuture(Buffer.buffer(html, "UTF-8")));
     }
 
@@ -79,8 +88,12 @@ public class DefaultTrombinoscopeExportService implements TrombinoscopeExportSer
     /**
      * Render the photo grid (title + students) as HTML, embedding each picture inline as a base64 data URI
      * since the external PDF rendering service has no access to the ENT storage/session.
+     * <p>
+     * A student without a trombinoscope-specific picture falls back to their directory avatar
+     * ({@code /userbook/avatar/:id}, public endpoint) when one exists ({@code UserBook.picture} set) ;
+     * otherwise (or on any failure) an initials medallion is rendered by the template.
      */
-    private Future<String> renderAudienceHtml(String structureId, String title, JsonArray students) {
+    private Future<String> renderAudienceHtml(String structureId, String title, JsonArray students, String baseUrl) {
         List<String> studentIds = new ArrayList<>();
         for (Object o : students) {
             studentIds.add(((JsonObject) o).getString("id"));
@@ -89,47 +102,94 @@ public class DefaultTrombinoscopeExportService implements TrombinoscopeExportSer
         Promise<Map<String, String>> picturesPromise = Promise.promise();
         trombinoscopeService.getPicturesByStudentIds(structureId, studentIds, picturesPromise);
 
-        return picturesPromise.future().compose(pictures -> {
-            JsonArray studentViews = new JsonArray();
-            List<Future<Void>> photoFutures = new ArrayList<>();
+        return picturesPromise.future().compose(pictures ->
+                studentsWithAvatar(studentIds).compose(avatarIds -> {
+                    JsonArray studentViews = new JsonArray();
+                    List<Future<Void>> photoFutures = new ArrayList<>();
 
-            for (Object o : students) {
-                JsonObject student = (JsonObject) o;
-                String firstName = student.getString("firstName");
-                String lastName = student.getString("lastName");
-                String pictureId = pictures.get(student.getString("id"));
+                    for (Object o : students) {
+                        JsonObject student = (JsonObject) o;
+                        String studentId = student.getString("id");
+                        String firstName = student.getString("firstName");
+                        String lastName = student.getString("lastName");
+                        String pictureId = pictures.get(studentId);
 
-                JsonObject view = new JsonObject()
-                        .put("firstName", firstName)
-                        .put("lastName", lastName)
-                        .put("initial", initials(firstName, lastName));
-                studentViews.add(view);
+                        JsonObject view = new JsonObject()
+                                .put("firstName", firstName)
+                                .put("lastName", lastName)
+                                .put("initial", initials(firstName, lastName));
+                        studentViews.add(view);
 
-                if (pictureId != null) {
-                    Promise<Void> photoPromise = Promise.promise();
-                    photoFutures.add(photoPromise.future());
-                    storage.readFile(pictureId, buffer -> {
-                        if (buffer != null && buffer.length() > 0) {
-                            view.put("photoBase64Uri", toDataUri(buffer));
+                        if (pictureId != null) {
+                            Promise<Void> photoPromise = Promise.promise();
+                            photoFutures.add(photoPromise.future());
+                            storage.readFile(pictureId, buffer -> {
+                                if (buffer != null && buffer.length() > 0) {
+                                    view.put("photoBase64Uri", toDataUri(buffer));
+                                }
+                                photoPromise.complete();
+                            });
+                        } else if (baseUrl != null && avatarIds.contains(studentId)) {
+                            Promise<Void> avatarPromise = Promise.promise();
+                            photoFutures.add(avatarPromise.future());
+                            webClient.getAbs(baseUrl + "/userbook/avatar/" + studentId)
+                                    .timeout(5000L)
+                                    .send(ar -> {
+                                        if (ar.succeeded() && ar.result().statusCode() == 200) {
+                                            Buffer body = ar.result().bodyAsBuffer();
+                                            if (body != null && body.length() > 0) {
+                                                view.put("photoBase64Uri", toDataUri(body));
+                                            }
+                                        }
+                                        avatarPromise.complete();
+                                    });
                         }
-                        photoPromise.complete();
-                    });
-                }
-            }
-
-            return Future.join(photoFutures).compose(done -> {
-                JsonObject params = new JsonObject().put("title", title).put("students", studentViews);
-                Promise<String> htmlPromise = Promise.promise();
-                templateProcessor.processTemplate(EXPORT_TEMPLATE, params, html -> {
-                    if (html == null) {
-                        htmlPromise.fail("[Viescolaire@DefaultTrombinoscopeExportService::renderAudienceHtml] failed to render template");
-                    } else {
-                        htmlPromise.complete(html);
                     }
-                });
-                return htmlPromise.future();
-            });
-        });
+
+                    return Future.join(photoFutures).compose(done -> {
+                        JsonObject params = new JsonObject().put("title", title).put("students", studentViews);
+                        Promise<String> htmlPromise = Promise.promise();
+                        templateProcessor.processTemplate(EXPORT_TEMPLATE, params, html -> {
+                            if (html == null) {
+                                htmlPromise.fail("[Viescolaire@DefaultTrombinoscopeExportService::renderAudienceHtml] failed to render template");
+                            } else {
+                                htmlPromise.complete(html);
+                            }
+                        });
+                        return htmlPromise.future();
+                    });
+                }));
+    }
+
+    /**
+     * Students (among {@code studentIds}) who have a real directory avatar
+     * ({@code UserBook.picture IS NOT NULL}) — as opposed to the platform's generic default avatar,
+     * which would add no distinguishing value over the initials medallion.
+     */
+    private Future<Set<String>> studentsWithAvatar(List<String> studentIds) {
+        if (studentIds.isEmpty()) {
+            return Future.succeededFuture(new HashSet<>());
+        }
+        String query = "MATCH (u:User) WHERE u.id IN {studentIds} "
+                + "MATCH (u)-[:USERBOOK]->(ub:UserBook) WHERE ub.picture IS NOT NULL "
+                + "RETURN u.id as id";
+        JsonObject params = new JsonObject().put("studentIds", new JsonArray(studentIds));
+
+        Promise<Set<String>> promise = Promise.promise();
+        neo4j.execute(query, params, Neo4jResult.validResultHandler(either -> {
+            if (either.isLeft()) {
+                log.warn("[Viescolaire@DefaultTrombinoscopeExportService::studentsWithAvatar] "
+                        + "Failed to check directory avatars: " + either.left().getValue());
+                promise.complete(new HashSet<>());
+                return;
+            }
+            Set<String> ids = new HashSet<>();
+            for (Object o : either.right().getValue()) {
+                ids.add(((JsonObject) o).getString("id"));
+            }
+            promise.complete(ids);
+        }));
+        return promise.future();
     }
 
     private Future<Buffer> toPdf(String name, String html) {
@@ -151,7 +211,7 @@ public class DefaultTrombinoscopeExportService implements TrombinoscopeExportSer
     /**
      * Export every class of the structure, one HTML/PDF file per class, zipped into a single archive.
      */
-    private Future<Buffer> exportStructureZip(String structureId, String format, String tempFolderRoot) {
+    private Future<Buffer> exportStructureZip(String structureId, String format, String tempFolderRoot, String baseUrl) {
         Promise<JsonArray> classesPromise = Promise.promise();
         classeService.listClasses(structureId, true, null, null, false, either -> {
             if (either.isLeft()) {
@@ -178,7 +238,7 @@ public class DefaultTrombinoscopeExportService implements TrombinoscopeExportSer
                 String className = classe.getString("name");
                 writeFutures.add(
                         resolveStudents(classe.getString("id"))
-                                .compose(students -> renderAudienceHtml(structureId, className, students))
+                                .compose(students -> renderAudienceHtml(structureId, className, students, baseUrl))
                                 .compose(html -> "pdf".equals(format) ? toPdf(className, html) : Future.succeededFuture(Buffer.buffer(html, "UTF-8")))
                                 .compose(content -> writeExportFile(tempDir, sanitizeFilename(className) + extension, content))
                 );
