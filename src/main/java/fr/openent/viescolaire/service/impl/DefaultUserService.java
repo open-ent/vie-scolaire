@@ -920,7 +920,7 @@ public class DefaultUserService extends SqlCrudService implements UserService {
         JsonObject params = new JsonObject()
                 .put(Field.STRUCTUREID, structureId)
                 .put(Field.USERID, userId)
-                .put(Field.QUERY, query)
+                .put(Field.QUERY, query == null ? null : query.toLowerCase())
                 .put(Field.PROFILES, new JsonArray().add(profile));
 
         neo4j.execute(neo4jquery, params, Neo4jResult.validResultHandler(handler));
