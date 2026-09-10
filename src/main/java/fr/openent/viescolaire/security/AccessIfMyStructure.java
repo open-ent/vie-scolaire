@@ -24,6 +24,13 @@ public class AccessIfMyStructure implements ResourcesProvider {
             handler.handle(false);
             return;
         }
+        // Le super-admin plateforme n'est pas forcément rattaché (user.getStructures()) à
+        // l'établissement consulté ; sans ce contournement, l'administration Vie Scolaire lui
+        // est inaccessible.
+        if (user.isADMC()) {
+            handler.handle(true);
+            return;
+        }
         if (user.getStructures() != null && user.getStructures().contains(structureId)) {
             handler.handle(true);
             return;
