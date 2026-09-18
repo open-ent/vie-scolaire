@@ -42,7 +42,7 @@
             <groupId>io.vertx</groupId>
             <artifactId>vertx-web-client</artifactId>
             <version>${vertxVersion}</version>
-            <scope>provided</scope>
+            <scope>compile</scope>
         </dependency>
         <dependency>
             <groupId>org.entcore</groupId>

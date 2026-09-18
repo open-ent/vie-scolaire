@@ -315,6 +315,13 @@ public class DefaultMatiereService extends SqlCrudService implements MatiereServ
 
     @Override
     public void getSubjectsAndTimetableSubjects(JsonArray subjectId, Handler<Either<String, JsonArray>> result) {
+        // Même piège Neo4j que checkGroupFromClass (cf. DefaultCommonCoursService) : une clause
+        // "IN {liste vide}" échoue silencieusement sur ce moteur (jamais de callback), ce qui
+        // bloque indéfiniment tout getCoursesOccurences pour un jour sans cours (subjectIds vide).
+        if (subjectId == null || subjectId.isEmpty()) {
+            result.handle(new Either.Right<>(new JsonArray()));
+            return;
+        }
         String query = "MATCH (s:TimetableSubject) WHERE s.id IN {subjectId} RETURN s.id as id, s.code as code, " +
                 "s.externalId as externalId, s.label as name ORDER BY name UNION MATCH (s:Subject) where s.id IN {subjectId} " +
                 "RETURN s.id as id, s.code as code, s.externalId as externalId, s.label as name ORDER BY name";

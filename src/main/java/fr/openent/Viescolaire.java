@@ -26,6 +26,8 @@ import fr.wseduc.mongodb.MongoDb;
 import io.vertx.core.*;
 import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.json.JsonObject;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 import org.entcore.common.http.BaseServer;
 import org.entcore.common.neo4j.Neo4j;
 import org.entcore.common.sql.Sql;
@@ -36,6 +38,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Viescolaire extends BaseServer {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(Viescolaire.class);
 
     /**
      * Déclaration des schémas
@@ -104,7 +108,8 @@ public class Viescolaire extends BaseServer {
     final Promise<Void> promise = Promise.promise();
     super.start(promise);
     promise.future()
-      .andThen(e -> this.initViescolaire())
+      .compose(e -> this.initViescolaire())
+      .onFailure(err -> LOGGER.error("[Viescolaire] initViescolaire failed", err))
       .onComplete(startPromise);
   }
   public Future<Void> initViescolaire() {
