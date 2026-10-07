@@ -499,6 +499,19 @@ public class DefaultCommonCoursService extends DBService implements CommonCoursS
 
     private void checkGroupFromClass(List<String> groupIds, List<String> groupExternalIds, List<String> group, String structureId,
                                      Handler<Either<String, JsonArray>> handler) {
+        // Aucun filtre de classe/groupe (ex. consultation par enseignant seul, ou recherche de
+        // conflit de salle sans contexte classe) : le moteur Neo4j de cette plateforme échoue
+        // silencieusement (jamais de callback, ni succès ni erreur -> bloque indéfiniment tout
+        // getCoursesOccurences) sur "IN [] OR IN [] OR IN []" quand les 3 listes sont vides à la
+        // fois. Aucun résultat à chercher dans ce cas précis (rien à filtrer), donc court-circuit
+        // plutôt que d'envoyer une requête qu'on sait cassée.
+        if ((groupIds == null || groupIds.isEmpty())
+                && (groupExternalIds == null || groupExternalIds.isEmpty())
+                && (group == null || group.isEmpty())) {
+            handler.handle(new Either.Right<>(new JsonArray()));
+            return;
+        }
+
         StringBuilder query = new StringBuilder();
         JsonObject params = new JsonObject();
 
