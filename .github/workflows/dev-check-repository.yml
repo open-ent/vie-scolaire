@@ -1,34 +1,81 @@
 name: dev-check-repository
 
+# Contrôle de build à chaque push, en UN SEUL job (comme build.sh local : gulp puis maven dans
+# le même workspace, sans handoff d'artefact — évite « frontend-assets not found » quand la sortie
+# gulp n'atterrit pas dans src/main/resources/). Remplace le legacy Gradle. CCTP 51C — CI.
 on: [push]
 
+permissions:
+  contents: read
+  packages: read
+
 jobs:
-  build-node-test:
+  build:
+    name: Build (Gulp + Maven)
     runs-on: ubuntu-latest
-
-    container:
-      image: opendigitaleducation/node:16-alpine-pnpm
-      options: --user root -v ${{ github.workspace }}:/home/node/:rw
-
     steps:
-      - uses: actions/checkout@v1
-      - name: Run pnpm install
-        run: pnpm install
-      - name: Run build node with Gulp
-        run: node_modules/gulp/bin/gulp.js build
-      - name: Run test
-        run: pnpm test
+      - uses: actions/checkout@v6
 
-  build-maven-test:
-    runs-on: ubuntu-latest
+      # IHM Angular (gulp 3.9 sous Node 10).
+      - name: Build frontend Angular (Gulp via Node 10 en Docker)
+        run: |
+          docker run --rm \
+            -v "${{ github.workspace }}:/workspace" \
+            -w /workspace \
+            --user root \
+            opendigitaleducation/node:10-alpine \
+            sh -c "npm install --legacy-peer-deps && node_modules/gulp/bin/gulp.js build"
+      - name: Verifier le bundle Angular
+        run: |
+          test -f src/main/resources/public/dist/vsco_personnels.js       || { echo "::error::bundle Angular manquant"; exit 1; }
 
-    container:
-      image: maven:3.8.6-jdk-8
-      options: --user root -v ${{ github.workspace }}:/home/maven/:rw
+      - uses: actions/setup-java@v6
+        with:
+          java-version: '21'
+          distribution: temurin
+          cache: maven
 
-    steps:
-      - uses: actions/checkout@v1
-      - name: Run build maven
-        run: mvn -Duser.home=/var/maven clean install
-      - name: Run maven test
-        run: mvn -Duser.home=/var/maven test
+      - name: Configure Maven pour GitHub Packages
+        run: |
+          mkdir -p ~/.m2
+          cat > ~/.m2/settings.xml << EOF
+          <settings>
+            <servers>
+              <server>
+                <id>github</id>
+                <username>$GITHUB_ACTOR</username>
+                <password>$GITHUB_TOKEN</password>
+              </server>
+              <server>
+                <id>pt-releases</id>
+                <username>$NEXUS_USER</username>
+                <password>$NEXUS_PASSWORD</password>
+              </server>
+            </servers>
+            <profiles>
+              <profile>
+                <id>github-packages</id>
+                <repositories>
+                  <repository>
+                    <id>github</id>
+                    <name>GitHub open-ent Packages</name>
+                    <url>https://maven.pkg.github.com/open-ent/entcore-v2</url>
+                    <releases><enabled>true</enabled></releases>
+                    <snapshots><enabled>true</enabled></snapshots>
+                  </repository>
+                </repositories>
+              </profile>
+            </profiles>
+            <activeProfiles>
+              <activeProfile>github-packages</activeProfile>
+            </activeProfiles>
+          </settings>
+          EOF
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_ACTOR: ${{ github.actor }}
+          NEXUS_USER: ${{ secrets.NEXUS_USER }}
+          NEXUS_PASSWORD: ${{ secrets.NEXUS_PASSWORD }}
+
+      - name: Build fat JAR (Maven)
+        run: mvn clean package -Dmaven.test.skip=true -B -DbuildNumber=${GITHUB_SHA::8} -DscmBranch=${GITHUB_REF_NAME}

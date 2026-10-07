@@ -293,8 +293,14 @@ public class DefaultGroupeService extends SqlCrudService implements GroupeServic
     }
 
 
+    private static final int GET_TYPES_OF_GROUP_MAX_RETRIES = 3;
+
     @Override
     public void getTypesOfGroup(JsonArray groupsIds, Handler<Either<String, JsonArray>> handler) {
+        getTypesOfGroup(groupsIds, handler, 0);
+    }
+
+    private void getTypesOfGroup(JsonArray groupsIds, Handler<Either<String, JsonArray>> handler, int attempt) {
         String neo4jQuery = "MATCH (c:FunctionalGroup) WHERE c.id IN {ids}" +
                 "RETURN c.id as id,\"FunctionalGroup\" as type  " +
                 "UNION " +
@@ -311,7 +317,14 @@ public class DefaultGroupeService extends SqlCrudService implements GroupeServic
             neo4j.execute(neo4jQuery, params, Neo4jResult.validResultHandler(handler));
 
         } catch (VertxException e) {
-            getTypesOfGroup(groupsIds, handler);
+            log.error("[Viescolaire@" + this.getClass().getSimpleName() + "::getTypesOfGroup] attempt " +
+                    attempt + " failed: " + e.getMessage());
+            if (attempt < GET_TYPES_OF_GROUP_MAX_RETRIES && e.getMessage() != null &&
+                    e.getMessage().contains("Connection was closed")) {
+                getTypesOfGroup(groupsIds, handler, attempt + 1);
+            } else {
+                handler.handle(new Either.Left<>(e.getMessage()));
+            }
         }
     }
 

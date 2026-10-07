@@ -24,6 +24,7 @@
            "timeout-transaction" : 1000,
            "enable-date" : "2023-09-18"
         },
+        "frontend-ui" : "angular",
         "services": {
             "competences": false,
             "presences": false,

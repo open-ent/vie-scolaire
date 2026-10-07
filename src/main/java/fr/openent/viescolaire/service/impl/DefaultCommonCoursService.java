@@ -87,7 +87,10 @@ public class DefaultCommonCoursService extends DBService implements CommonCoursS
             .put(COURSE_TABLE.recurrence, 1)
             .put(COURSE_TABLE.timetableSubjectId, 1);
     private static final String START_DATE_PATTERN = "T00:00Z";
-    private static final String END_DATE_PATTERN = "T23.59Z";
+    // Faute de frappe historique ("T23.59Z", point au lieu de ':') : dans le filtre Mongo $lte de
+    // getCoursesOccurences, '.' (0x2E) < ':' (0x3A) en comparaison de chaînes, donc un cours dont
+    // endDate tombe exactement à 23h ("...T23:xx:xxZ") était exclu à tort du filtre de fin.
+    private static final String END_DATE_PATTERN = "T23:59Z";
     private static final String START_END_DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ss";
     private final Neo4j neo4j = Neo4j.getInstance();
     private final PeriodeAnneeService periodeAnneeService;

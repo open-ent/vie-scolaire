@@ -7,6 +7,9 @@ import io.vertx.core.Handler;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.json.JsonObject;
 
+import java.util.List;
+import java.util.Map;
+
 
 public interface TrombinoscopeService {
 
@@ -65,4 +68,13 @@ public interface TrombinoscopeService {
      * @return Future       {@link Future} of {@link JsonObject} completed or failure
      */
     Future<JsonObject> deletePicture(String structureId, String studentId);
+
+    /**
+     * get trombinoscope picture identifiers for a list of students, in bulk
+     *
+     * @param structureId   Structure Identifier
+     * @param studentIds    Student identifiers
+     * @param handler       Function handler returning a map of studentId -> pictureId
+     */
+    void getPicturesByStudentIds(String structureId, List<String> studentIds, Handler<AsyncResult<Map<String, String>>> handler);
 }

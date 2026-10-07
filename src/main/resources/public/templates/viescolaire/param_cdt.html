@@ -39,6 +39,12 @@
                                 <i18n>cdt.session.type</i18n>
                             </a>
                         </li>
+                        <li>
+                            <a href=""  ng-class="{'selected': currParam === 3}"
+                               ng-click="currParam = 3;">
+                                <i18n>cdt.audience.settings.title</i18n>
+                            </a>
+                        </li>
                     </ul>
                 </nav>
             </div>
@@ -66,6 +72,15 @@
     <div  ng-if="currParam === 2" ng-init="source.idStructure = structure.id;">
         <sniplet
                 template="session_type"
+                application="diary"
+                source="source"
+                class="ng-scope"
+        ></sniplet>
+    </div>
+    <!-- Diary enabled/disabled per class/group (MOD11) -->
+    <div  ng-if="currParam === 3" ng-init="source.idStructure = structure.id;">
+        <sniplet
+                template="audience_settings"
                 application="diary"
                 source="source"
                 class="ng-scope"

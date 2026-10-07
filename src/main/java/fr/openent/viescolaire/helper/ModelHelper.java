@@ -29,6 +29,7 @@ public class ModelHelper {
     }
 
     public static JsonArray toJsonArray(List<? extends IModel<?>> dataList) {
+        if (dataList == null) return new JsonArray();
         return new JsonArray(dataList.stream().map(IModel::toJson).collect(Collectors.toList()));
     }
 

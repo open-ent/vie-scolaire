@@ -10,7 +10,9 @@ public class StructureAdminPersonnalTeacher implements ResourcesProvider {
     @Override
     public void authorize(final HttpServerRequest request, Binding binding, final UserInfos user, final Handler<Boolean> handler) {
         String structureId = WorkflowActionUtils.getParamStructure(request);
-        handler.handle(structureId != null && user.getStructures().contains(structureId) && (WorkflowActionUtils.hasRight(user, WorkflowActionUtils.ADMIN_RIGHT) ||
-                "Personnel".equals(user.getType()) || "Teacher".equals(user.getType())));
+        // Le super-admin plateforme n'est pas forcément rattaché à l'établissement consulté ;
+        // sans ce contournement, l'administration Vie Scolaire lui est inaccessible.
+        handler.handle(user.isADMC() || (structureId != null && user.getStructures().contains(structureId) && (WorkflowActionUtils.hasRight(user, WorkflowActionUtils.ADMIN_RIGHT) ||
+                "Personnel".equals(user.getType()) || "Teacher".equals(user.getType()))));
     }
 }

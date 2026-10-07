@@ -30,7 +30,17 @@ public class DateHelper {
     private static final String  DAY_OF_WEEK = "dayOfWeek";
 
     public static Date parse(String date) throws ParseException {
-        return date.contains("T") ? DATE_FORMATTER.parse(date) : DATE_TIME_FORMATTER.parse(date);
+        if (date.contains("T")) {
+            return DATE_FORMATTER.parse(date);
+        }
+        // A bare "yyyy-MM-dd" (no time component) was blindly handed to DATE_TIME_FORMATTER
+        // ("yyyy-MM-dd HH:mm:ss"), which always threw ParseException for it — e.g. the school
+        // year start/end dates sent by the structure init wizard, silently corrupting the
+        // initialization of 1D structures (InitWorker1D) instead of just parsing the date.
+        if (date.length() == YEAR_MONTH_DAY.length()) {
+            return new SimpleDateFormat(YEAR_MONTH_DAY).parse(date);
+        }
+        return DATE_TIME_FORMATTER.parse(date);
     }
 
     public static Date parseDate(String dateString, String format) {
