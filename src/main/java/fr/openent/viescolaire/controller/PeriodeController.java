@@ -18,6 +18,7 @@
 package fr.openent.viescolaire.controller;
 
 import fr.openent.Viescolaire;
+import fr.openent.viescolaire.security.AdminRightPeriode;
 import fr.openent.viescolaire.security.AdminRightStructure;
 import fr.openent.viescolaire.service.PeriodeService;
 import fr.openent.viescolaire.service.UtilsService;
@@ -132,7 +133,10 @@ public class PeriodeController extends ControllerHelper {
 
     @Put("/periode/:id")
     @ApiDoc("Met à jour la publication du bulletin pour une période")
-    @SecuredAction(value="", type = ActionType.AUTHENTICATED)
+    // Ouverte à tout utilisateur connecté jusqu'ici : n'importe qui pouvait publier ou dépublier les
+    // bulletins d'une période. Désormais réservée à l'administrateur vie scolaire de l'établissement.
+    @SecuredAction(value="", type = ActionType.RESOURCE)
+    @ResourceFilter(AdminRightPeriode.class)
     public void updatePublication (HttpServerRequest request){
         UserUtils.getUserInfos(eb, request, new Handler<UserInfos>() {
             @Override
