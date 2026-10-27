@@ -14,7 +14,7 @@ import org.entcore.common.user.UserInfos;
  * Sans ce second cas, un inspecteur rattaché académiquement au rectorat (et non membre de
  * l'établissement inspecté) ne pourrait jamais consulter les périodes/classes de cet
  * établissement, alors que sa fonction lui donne précisément ce droit transversal
- * (cf. `creer_fonctions_transversales_sdet.py`).
+ * (cf. `create-sdet-cross-functions.py`).
  */
 public class AccessIfMyStructure implements ResourcesProvider {
     @Override
