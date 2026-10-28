@@ -215,7 +215,7 @@ public class DefaultClasseService extends SqlCrudService implements ClasseServic
                 " AND (m)<-[:IN]-(:User {profiles: ['Teacher']}) RETURN distinct(m) ";
 
         String returnLastGroup = "WITH r.groups as libelleClasses, s, u, sub MATCH (s)--(c) " +
-                "WHERE (c:FunctionalGroup OR c:ManualGroup) AND ALL(x IN c.externalId WHERE x in libelleClasses) " +
+                "WHERE (c:FunctionalGroup OR c:ManualGroup) AND c.externalId IN libelleClasses " +
                 "RETURN c AS m;";
 
         String param1;
