@@ -76,7 +76,7 @@ public class DefaultMatiereService extends SqlCrudService implements MatiereServ
         StringBuilder query = new StringBuilder();
         JsonObject values = new JsonObject();
 
-        query.append("MATCH (u:`User` {id:{userId}}),(s:Structure)<-[:SUBJECT]-(f:Subject)")
+        query.append("MATCH (u:`User` {id:$userId}),(s:Structure)<-[:SUBJECT]-(f:Subject)")
                 .append(" WHERE f.code in u.fieldOfStudy and s.externalId in u.structures")
                 .append(" return f.id as id, f.code as externalId, f.label as name");
         values.put("userId", userId);
@@ -101,7 +101,7 @@ public class DefaultMatiereService extends SqlCrudService implements MatiereServ
                     "ORDER BY name ";
         }
 
-        String query = "MATCH (sub:Subject)-[sj:SUBJECT]->(s:Structure {id: {idStructure}}) " + returndata;
+        String query = "MATCH (sub:Subject)-[sj:SUBJECT]->(s:Structure {id: $idStructure}) " + returndata;
         JsonObject values = new JsonObject().put("idStructure", idStructure);
 
         neo4j.execute(query, values, Neo4jResult.validResultHandler(responseNeo4j -> {
@@ -116,21 +116,21 @@ public class DefaultMatiereService extends SqlCrudService implements MatiereServ
         String withValue = " WITH r.classes + r.groups as libelleClasses, s, u, sub " +
                 "MATCH (s)--(c) WHERE (c:Class OR c:FunctionalGroup OR c:ManualGroup) AND ALL(x IN c.externalId WHERE x in libelleClasses) ";
         String returnValue = " RETURN u.id as idEnseignant, s.id as idEtablissement, sub.id as id, sub.code as externalId, sub.label as name, libelleClasses, COLLECT(c.id) as idClasses";
-        String condition = "WHERE s.id = {structureId}";
+        String condition = "WHERE s.id = $structureId";
         JsonObject params = new JsonObject().put("structureId", structureId);
 
         if(aIdEnseignant != null && aIdEnseignant.size() != 0) {
-            condition += " AND u.id IN {userIdList}";
+            condition += " AND u.id IN $userIdList";
             params.put("userIdList", aIdEnseignant);
         }
 
         if(aIdMatiere != null && aIdMatiere.size() != 0) {
-            condition += " AND sub.id IN {subjectIdList}";
+            condition += " AND sub.id IN $subjectIdList";
             params.put("subjectIdList", aIdMatiere);
         }
 
         if(aIdGroupe != null && aIdGroupe.size() != 0) {
-            withValue += " AND c.id IN {groupeIdList}";
+            withValue += " AND c.id IN $groupeIdList";
             params.put("groupeIdList", aIdGroupe);
         }
 
@@ -322,8 +322,8 @@ public class DefaultMatiereService extends SqlCrudService implements MatiereServ
             result.handle(new Either.Right<>(new JsonArray()));
             return;
         }
-        String query = "MATCH (s:TimetableSubject) WHERE s.id IN {subjectId} RETURN s.id as id, s.code as code, " +
-                "s.externalId as externalId, s.label as name ORDER BY name UNION MATCH (s:Subject) where s.id IN {subjectId} " +
+        String query = "MATCH (s:TimetableSubject) WHERE s.id IN $subjectId RETURN s.id as id, s.code as code, " +
+                "s.externalId as externalId, s.label as name ORDER BY name UNION MATCH (s:Subject) where s.id IN $subjectId " +
                 "RETURN s.id as id, s.code as code, s.externalId as externalId, s.label as name ORDER BY name";
 
         JsonObject params = new JsonObject().put("subjectId", subjectId);
@@ -334,9 +334,9 @@ public class DefaultMatiereService extends SqlCrudService implements MatiereServ
 
     @Override
     public void getSubjectsAndTimetableSubjects(String structureId, Handler<Either<String, JsonArray>> result) {
-        String query = "MATCH (:Structure {id: {structureId}})<-[:SUBJECT]-(s:TimetableSubject) " +
+        String query = "MATCH (:Structure {id: $structureId})<-[:SUBJECT]-(s:TimetableSubject) " +
                 "RETURN s.id as id, s.code as code, s.externalId as externalId, s.label as name ORDER BY name UNION " +
-                "MATCH (:Structure {id: {structureId}})<-[:SUBJECT]-(s:Subject) " +
+                "MATCH (:Structure {id: $structureId})<-[:SUBJECT]-(s:Subject) " +
                 "RETURN s.id as id, s.code as code, s.externalId as externalId, s.label as name ORDER BY name";
 
         JsonObject params = new JsonObject().put("structureId", structureId);
@@ -350,7 +350,7 @@ public class DefaultMatiereService extends SqlCrudService implements MatiereServ
         StringBuilder query = new StringBuilder();
         JsonObject params = new JsonObject();
 
-        query.append("MATCH (f:Subject) WHERE f.id IN {idMatieres} ")
+        query.append("MATCH (f:Subject) WHERE f.id IN $idMatieres ")
                 .append("RETURN f.id as id, ")
                 .append("f.code as externalId, ")
                 .append("f.label as name, ")
@@ -377,7 +377,7 @@ public class DefaultMatiereService extends SqlCrudService implements MatiereServ
         StringBuilder query = new StringBuilder();
         JsonObject params = new JsonObject();
 
-        query.append("  MATCH (n:Subject {id: {idMatiere}}) RETURN n ");
+        query.append("  MATCH (n:Subject {id: $idMatiere}) RETURN n ");
         params.put("idMatiere", idMatiere);
         try {
             neo4j.execute(query.toString(), params, Neo4jResult.validUniqueResultHandler(result));
@@ -488,7 +488,7 @@ public class DefaultMatiereService extends SqlCrudService implements MatiereServ
     public Future<SubjectModel> getSubjectByCode(String structureId, String code) {
         Promise<SubjectModel> promise = Promise.promise();
         String query = "MATCH (s: Structure)<-[:SUBJECT]-(sub: Subject) " +
-                "WHERE s.id = {structureId} AND sub.code = {code} " +
+                "WHERE s.id = $structureId AND sub.code = $code " +
                 "RETURN sub.id AS id, sub.code AS code, sub.label AS label, sub.source AS source";
 
         JsonObject params = new JsonObject()

@@ -47,7 +47,7 @@ public class StructureAdminPersonnalTeacherFromGroupTest {
         params = Mockito.spy(new HeadersAdaptor(new DefaultHttpHeaders()));
         user = new UserInfos();
         access = new StructureAdminPersonnalTeacherFromGroup();
-        PROPER_QUERY = "MATCH(s:Structure)<-[:DEPENDS]-(g:Group) WHERE g.id = {groupId} RETURN DISTINCT s.id as structureId";
+        PROPER_QUERY = "MATCH(s:Structure)<-[:DEPENDS]-(g:Group) WHERE g.id = $groupId RETURN DISTINCT s.id as structureId";
         groupId = "groupId";
         queryParamObject = new JsonObject();
         queryParamObject.put(Field.GROUP_ID_CAMEL, groupId);

@@ -42,7 +42,7 @@ public class StructureService extends DBService {
     }
 
     public void retrieveStructureInfo(String id, Handler<Either<String, JsonObject>> handler) {
-        String query = "MATCH (s:Structure {id: {id}}) RETURN s.id as id, s.name as name, s.UAI as UAI";
+        String query = "MATCH (s:Structure {id: $id}) RETURN s.id as id, s.name as name, s.UAI as UAI";
         JsonObject params = new JsonObject().put("id", id);
         neo4j.execute(query, params, Neo4jResult.validUniqueResultHandler(handler));
     }

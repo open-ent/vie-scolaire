@@ -78,7 +78,7 @@ public class DefaultMementoService extends DBService implements MementoService {
      * @param promise future completing the process
      */
     private void retrieveStudentClasses(String id, Promise<JsonObject> promise) {
-        String query = "MATCH (u:User {id:{id}})-[:IN]->(:ProfileGroup)-[:DEPENDS]->(g:Class)" +
+        String query = "MATCH (u:User {id:$id})-[:IN]->(:ProfileGroup)-[:DEPENDS]->(g:Class)" +
                 "RETURN collect(g.name) AS classes, collect(g.id) as id";
         JsonObject params = new JsonObject().put("id", id);
         neo4j.execute(query, params, Neo4jResult.validUniqueResultHandler(res -> {
@@ -95,7 +95,7 @@ public class DefaultMementoService extends DBService implements MementoService {
      * @param promise future completing the process
      */
     private void retrieveStudentAndItsFunctionalGroups(String id, Promise<JsonObject> promise) {
-        String query = "MATCH(u:User {id:{id}})" +
+        String query = "MATCH(u:User {id:$id})" +
                 "OPTIONAL MATCH (u)-[:IN]-(g:FunctionalGroup) " +
                 "RETURN u.id as id, u.lastName + ' ' + u.firstName AS name, u.birthDate as birth_date, " +
                 "u.accommodation as accommodation, u.transport as transport, collect(g.name) as groups";
@@ -153,11 +153,11 @@ public class DefaultMementoService extends DBService implements MementoService {
      * @param handler       Function handler returning data
      */
     private void getAllRelatives(String studentId, Handler<Either<String, JsonArray>> handler) {
-        String query = "MATCH(:User {id:{id}})-[:RELATED]->(u:User) " +
+        String query = "MATCH(:User {id:$id})-[:RELATED]->(u:User) " +
                 "RETURN u.id as id, u.lastName + ' ' + u.firstName AS name, u.title AS title, " +
                 "CASE WHEN u.mobilePhone is null THEN u.mobile ELSE u.mobilePhone[0] END AS mobile, " +
                 "u.homePhone AS phone, u.address + ' ' + u.zipCode + ' ' + u.city AS address, u.email as email, " +
-                "NOT(HAS(u.activationCode)) AS activated";
+                "u.activationCode IS NULL AS activated";
         JsonObject params = new JsonObject().put("id", studentId);
         neo4j.execute(query, params, res -> {
             Either<String, JsonArray> relativeHandler = Neo4jResult.validResult(res);
@@ -184,7 +184,7 @@ public class DefaultMementoService extends DBService implements MementoService {
     @Override
     public void updateRelativePriorities(String studentId, JsonArray relativeIds, Handler<Either<String, JsonObject>> handler) {
 
-        String query = "MATCH(u:User {id:{id}}) SET u.primaryRelatives = {relativeIds} " +
+        String query = "MATCH(u:User {id:$id}) SET u.primaryRelatives = $relativeIds " +
                 "RETURN u.primaryRelatives AS primaryRelatives";
 
         JsonObject params = new JsonObject().put("id", studentId)

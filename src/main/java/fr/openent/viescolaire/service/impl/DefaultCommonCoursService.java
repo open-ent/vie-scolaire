@@ -516,9 +516,9 @@ public class DefaultCommonCoursService extends DBService implements CommonCoursS
         JsonObject params = new JsonObject();
 
         query.append("MATCH (u:User {profiles:['Student']})--(:ProfileGroup)--(c:Class)--(s:Structure) ")
-                .append("WHERE s.id = {idStructure} ")
-                .append("AND (c.name IN {labelClasses} OR c.externalId IN {classesExternalIds} ")
-                .append("OR c.id IN {classesIds}) ")
+                .append("WHERE s.id = $idStructure ")
+                .append("AND (c.name IN $labelClasses OR c.externalId IN $classesExternalIds ")
+                .append("OR c.id IN $classesIds) ")
                 .append("WITH u, c MATCH (u)--(g) WHERE g:FunctionalGroup OR g:ManualGroup ")
                 .append("RETURN  c.name as name_classe, COLLECT(DISTINCT g.name) AS name_groups");
         params.put("idStructure", structureId);

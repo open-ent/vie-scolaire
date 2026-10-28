@@ -47,7 +47,7 @@ public class StructureAdminPersonnalTeacherFromGroup implements ResourcesProvide
 
     public Future<JsonObject> getStructureByGroup(String groupId){
         Promise<JsonObject> promise = Promise.promise();
-        String query = "MATCH(s:Structure)<-[:DEPENDS]-(g:Group) WHERE g.id = {groupId} RETURN DISTINCT s.id as structureId";
+        String query = "MATCH(s:Structure)<-[:DEPENDS]-(g:Group) WHERE g.id = $groupId RETURN DISTINCT s.id as structureId";
         JsonObject params = new JsonObject();
 
         params.put(Field.GROUP_ID_CAMEL, groupId);

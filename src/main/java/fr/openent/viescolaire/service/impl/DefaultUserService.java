@@ -650,14 +650,14 @@ public class DefaultUserService extends SqlCrudService implements UserService {
     @Override
     public void getUAI(String idEtabl, Handler<Either<String,JsonObject>> handler){
         StringBuilder query= new StringBuilder();
-        query.append("MATCH(s:Structure) WHERE s.id={id} RETURN s.UAI as uai");
+        query.append("MATCH(s:Structure) WHERE s.id=$id RETURN s.UAI as uai");
         Neo4j.getInstance().execute(query.toString(), new JsonObject().put("id", idEtabl), Neo4jResult.validUniqueResultHandler(handler));
     }
 
     @Override
     public void getUsers(List<String> idUsers, Handler<Either<String, JsonArray>> handler){
         StringBuilder query=new StringBuilder();
-        query.append("MATCH (u:User) WHERE u.id IN {id} " +
+        query.append("MATCH (u:User) WHERE u.id IN $id " +
                 "OPTIONAL MATCH (s:Structure) " +
                 "WHERE s.externalId IN u.structures " +
                 "OPTIONAL MATCH (g:Group) " +
@@ -678,7 +678,7 @@ public class DefaultUserService extends SqlCrudService implements UserService {
     public void getElevesRelatives(List<String> idsClass,Handler<Either<String,JsonArray>> handler){
         StringBuilder query = new StringBuilder();
         JsonObject param = new JsonObject();
-        query.append("MATCH (c:Class)<-[:DEPENDS]-(:ProfileGroup)<-[:IN]-(u:User {profiles:['Student']})-[:RELATED]-(r:User{profiles:['Relative']}) WHERE c.id IN {idClass}");
+        query.append("MATCH (c:Class)<-[:DEPENDS]-(:ProfileGroup)<-[:IN]-(u:User {profiles:['Student']})-[:RELATED]-(r:User{profiles:['Relative']}) WHERE c.id IN $idClass");
         query.append(" RETURN u.id as idNeo4j, u.externalId as externalId,u.attachmentId as attachmentId,u.lastName as lastName,u.level as level,u.firstName as firstName,u.relative as relative,");
         query.append("r.externalId as externalIdRelative, r.title as civilite, r.lastName as lastNameRelative, r.firstName as firstNameRelative, r.address as address, r.zipCode as zipCode, r.city as city,");
         query.append("c.id as idClass, c.name as nameClass, c.externalId as externalIdClass ORDER BY nameClass, lastName");
@@ -697,9 +697,9 @@ public class DefaultUserService extends SqlCrudService implements UserService {
                                                List<String> deletedStudentsPostegre,
                                                Handler<Either<String, JsonArray>> handler) {
         JsonObject params = new JsonObject();
-        String query = "MATCH (s:Structure{id:{structureId}})<-[:BELONGS]-(c:Class)"+
+        String query = "MATCH (s:Structure{id:$structureId})<-[:BELONGS]-(c:Class)"+
                 "<-[:DEPENDS]-(:ProfileGroup)<-[:IN]-(u:User {profiles:['Student']})-[:RELATED]-(r:User{profiles:['Relative']})"+
-                " WHERE c.id IN {classIds}"+
+                " WHERE c.id IN $classIds"+
                 " RETURN c.id as idClass, c.name as nameClass, c.externalId as externalIdClass, u.id as idEleve, "+
                 "u.created as createdDate,u.deleteDate as deleteDate, u.externalId as externalId,u.attachmentId as attachmentId, "+
                 "u.lastName as lastName,u.level as level,u.firstName as firstName,u.relative as relative, " +
@@ -707,8 +707,8 @@ public class DefaultUserService extends SqlCrudService implements UserService {
                 "r.firstName as firstNameRelative, r.address as address, r.zipCode as zipCode, r.city as city " +
                 "ORDER BY nameClass, lastName "+
                 "UNION MATCH (u:User {profiles: ['Student']})-[:HAS_RELATIONSHIPS]->(b:Backup), " +
-                "(s:Structure{id:{structureId}})<-[:BELONGS]-(c:Class) WHERE HAS(u.deleteDate) AND "+
-                "(c.id IN {classIds} AND c.externalId IN u.classes) " +
+                "(s:Structure{id:$structureId})<-[:BELONGS]-(c:Class) WHERE u.deleteDate IS NOT NULL AND "+
+                "(c.id IN $classIds AND c.externalId IN u.classes) " +
                 "RETURN c.id as idClass, c.name as nameClass, c.externalId as externalIdClass, " +
                 "u.id as idEleve, u.created as createdDate, u.deleteDate as deleteDate,u.externalId as externalId, " +
                 "u.attachmentId as attachmentId, u.lastName as lastName, u.level as level, u.firstName as firstName, " +
@@ -719,9 +719,9 @@ public class DefaultUserService extends SqlCrudService implements UserService {
         params.put("structureId", idStructure).put("classIds",idsClass);
 
         if(deletedStudentsPostegre != null && deletedStudentsPostegre.size() > 0){
-            query +=" UNION MATCH (s:Structure{id:{structureId}})<-[:BELONGS]-(c:Class)<-[:DEPENDS]-(:ProfileGroup)"+
+            query +=" UNION MATCH (s:Structure{id:$structureId})<-[:BELONGS]-(c:Class)<-[:DEPENDS]-(:ProfileGroup)"+
                     "<-[:IN]-(u:User {profiles:['Student']})-[:RELATED]-(r:User{profiles:['Relative']}) " +
-                    "WHERE u.id IN {idsDeletedStudent}" +
+                    "WHERE u.id IN $idsDeletedStudent " +
                     "RETURN c.id as idClass, c.name as nameClass, c.externalId as externalIdClass, u.id as idEleve, " +
                     "u.created as createdDate, u.deleteDate as deleteDate, u.externalId as externalId, "+
                     "u.attachmentId as attachmentId, u.lastName as lastName, u.level as level, u.firstName as firstName, " +
@@ -751,7 +751,7 @@ public class DefaultUserService extends SqlCrudService implements UserService {
 
     @Override
     public void getResponsablesDirection(String idStructure, Handler<Either<String, JsonArray>> handler) {
-        String query = "MATCH (u:User{profiles:['Personnel']})-[IN]->(g:Group)-[DEPENDS]->(s:Structure {id:{structureId}}) " +
+        String query = "MATCH (u:User{profiles:['Personnel']})-[IN]->(g:Group)-[DEPENDS]->(s:Structure {id:$structureId}) " +
                 "WHERE ANY(function IN u.functions WHERE function =~ (s.externalId+'\\\\$DIR\\\\$.*'))" +
                 " RETURN DISTINCT u.id as id, u.displayName as displayName, u.externalId as externalId";
         JsonObject param = new JsonObject();
@@ -768,7 +768,7 @@ public class DefaultUserService extends SqlCrudService implements UserService {
     @Override
     public void getEnfants(String idUser, Handler<Either<String, JsonArray>> handler) {
         StringBuilder query = new StringBuilder();
-        query.append("MATCH (m:User {id: {id}})<-[:RELATED]-(n:User)")
+        query.append("MATCH (m:User {id: $id})<-[:RELATED]-(n:User)")
                 .append("RETURN n.id as id, n.firstName as firstName, n.lastName as lastName,  n.level as level, n.classes as classes, n.birthDate as birthDate ORDER BY lastName");
         neo4j.execute(query.toString(), new JsonObject().put("id", idUser), Neo4jResult.validResultHandler(handler));
     }
@@ -782,7 +782,7 @@ public class DefaultUserService extends SqlCrudService implements UserService {
     public void getPersonnels(List<String> idPersonnels, Handler<Either<String, JsonArray>> handler) {
         StringBuilder query = new StringBuilder();
         query.append("MATCH (u:User)")
-                .append("WHERE ANY (x IN u.profiles WHERE x IN ['Teacher', 'Personnel']) AND u.id IN {idPersonnel}")
+                .append("WHERE ANY (x IN u.profiles WHERE x IN ['Teacher', 'Personnel']) AND u.id IN $idPersonnel")
                 .append("RETURN u.id as id, u.lastName as lastName, u.firstName as firstName, u.emailAcademy as emailAcademy");
         neo4j.execute(query.toString(), new JsonObject().put("idPersonnel", new JsonArray(idPersonnels)), Neo4jResult.validResultHandler(handler));
     }
@@ -796,7 +796,7 @@ public class DefaultUserService extends SqlCrudService implements UserService {
     @Override
     public void getTeachers(String idEtablissement, Handler<Either<String, JsonArray>> handler) {
         //String query = "MATCH (:Structure {id: {idEtablissement}})-[:ADMINISTRATIVE_ATTACHMENT]-(u:User {profiles: ['Teacher']}) RETURN u";
-        String query = "MATCH (u:User {profiles: ['Teacher']})-[:IN]->(:ProfileGroup)-[:DEPENDS*]->(s:Structure {id: {idEtablissement}}) " +
+        String query = "MATCH (u:User {profiles: ['Teacher']})-[:IN]->(:ProfileGroup)-[:DEPENDS*]->(s:Structure {id: $idEtablissement}) " +
                 "RETURN DISTINCT u.classes as classes, u.displayName as displayName, u.displayNameSearchField as displayNameSearchField , " +
                 "u.externalId as externalId, u.firstName as firstName, u.firstNameSearchField as firstNameSearchField, " +
                 "u.functions as functions, u.groups as groups, u.headTeacher as headTeacher, u.id as id, u.isTeacher as isTeacher," +
@@ -809,7 +809,7 @@ public class DefaultUserService extends SqlCrudService implements UserService {
     @Override
     public Future<JsonArray> getTeachersWithClassIds(String structureId) {
         Promise<JsonArray> promise = Promise.promise();
-        String query =  "MATCH (s:Structure {id: {structureId}})" +
+        String query =  "MATCH (s:Structure {id: $structureId})" +
                 "<-[:DEPENDS*]-(:ProfileGroup)<-[:IN]-(u:User {profiles: ['Teacher']}) " +
                 "WITH u, s " +
                 "OPTIONAL MATCH (u)-[:IN]->(f:ProfileGroup)-[:DEPENDS]->(c: Class)-[:BELONGS]->(s) " +
@@ -820,7 +820,7 @@ public class DefaultUserService extends SqlCrudService implements UserService {
                 "THEN [null] " +
                 "ELSE classes_externalIds " +
                 "END AS class_externalId " +
-                "OPTIONAL MATCH (c:Class {externalId: class_externalId})-[:BELONGS]->(s:Structure {id: {structureId}}) " +
+                "OPTIONAL MATCH (c:Class {externalId: class_externalId})-[:BELONGS]->(s:Structure {id: $structureId}) " +
                 "WITH u, COLLECT(DISTINCT c.id) + attachedClassIds AS allClassIds " +
                 "RETURN u.id AS id, u.displayName AS displayName, allClassIds AS classIds " +
                 "ORDER BY displayName";
@@ -836,20 +836,20 @@ public class DefaultUserService extends SqlCrudService implements UserService {
         String filter = "";
         String filterProfile = "WHERE 1=1 AND p.name <> 'Student' AND p.name <> 'Relative' ";
         String optionalMatch =
-                "OPTIONAL MATCH u-[:IN]->(:ProfileGroup)-[:DEPENDS]->(class:Class)-[:BELONGS]->(s) " +
-                        "OPTIONAL MATCH u-[:RELATED]->(parent: User) " +
-                        "OPTIONAL MATCH (child: User)-[:RELATED]->u " +
-                        "OPTIONAL MATCH u-[rf:HAS_FUNCTION]->fg-[:CONTAINS_FUNCTION*0..1]->(f:Function) ";
+                "OPTIONAL MATCH (u)-[:IN]->(:ProfileGroup)-[:DEPENDS]->(class:Class)-[:BELONGS]->(s) " +
+                        "OPTIONAL MATCH (u)-[:RELATED]->(parent: User) " +
+                        "OPTIONAL MATCH (child: User)-[:RELATED]->(u) " +
+                        "OPTIONAL MATCH (u)-[rf:HAS_FUNCTION]->(fg)-[:CONTAINS_FUNCTION*0..1]->(f:Function) ";
         if (profile != null && !profile.trim().isEmpty()) {
-            filterProfile += "AND p.name = {profile} ";
+            filterProfile += "AND p.name = $profile ";
             params.put(Field.PROFILE, profile);
         }
         if (structureId != null && !structureId.trim().isEmpty()) {
-            filter = "(n:Structure {id : {structureId}})<-[:DEPENDS]-(g:ProfileGroup)<-[:IN]-";
+            filter = "(n:Structure {id : $structureId})<-[:DEPENDS]-(g:ProfileGroup)<-[:IN]-";
             params.put(Field.STRUCTUREID, structureId);
         }
         String condition = "";
-        String functionMatch = "WITH u MATCH (s:Structure)<-[:DEPENDS]-(pg:ProfileGroup)-[:HAS_PROFILE]->(p:Profile), u-[:IN]->pg ";
+        String functionMatch = "WITH u MATCH (s:Structure)<-[:DEPENDS]-(pg:ProfileGroup)-[:HAS_PROFILE]->(p:Profile), (u)-[:IN]->(pg) ";
 
         String query =
                 "MATCH " + filter + "(u:User) " +
@@ -885,18 +885,18 @@ public class DefaultUserService extends SqlCrudService implements UserService {
         final StringBuilder filter = new StringBuilder();
 
         if(fields.size() == 2 && fields.contains(Field.FIRSTNAME) && fields.contains(Field.LASTNAME)){
-            filter.append("OR (toLower(").append(getFieldName(Field.FIRSTNAME)).append(") + ' ' + toLower(").append(getFieldName(Field.LASTNAME)).append(")) STARTS WITH {query} ")
-                    .append("OR (toLower(").append(getFieldName(Field.LASTNAME)).append(") + ' ' + toLower(").append(getFieldName(Field.FIRSTNAME)).append(")) STARTS WITH {query} ");
+            filter.append("OR (toLower(").append(getFieldName(Field.FIRSTNAME)).append(") + ' ' + toLower(").append(getFieldName(Field.LASTNAME)).append(")) STARTS WITH $query ")
+                    .append("OR (toLower(").append(getFieldName(Field.LASTNAME)).append(") + ' ' + toLower(").append(getFieldName(Field.FIRSTNAME)).append(")) STARTS WITH $query ");
         }
         else
-            fields.forEach(field -> filter.append("OR toLower(").append(getFieldName(field)).append(") CONTAINS {query} "));
+            fields.forEach(field -> filter.append("OR toLower(").append(getFieldName(field)).append(") CONTAINS $query "));
 
         String neo4jquery = "MATCH (u:User)-[:IN]->(p:ProfileGroup)-[:DEPENDS*]->(s:Structure) ";
 
         if (!Objects.equals(profile, "Personnel"))
             neo4jquery += ",(p)-[:DEPENDS]->(c:Class) ";
 
-        neo4jquery += "WHERE s.id = {structureId} AND u.profiles = {profiles} " +
+        neo4jquery += "WHERE s.id = $structureId AND u.profiles = $profiles " +
                 "AND (" + filter.toString().replaceFirst("OR ", "") + ") " +
                 "RETURN distinct u.id as id, (u.lastName + ' ' + u.firstName) as displayName, u.lastName as lastName," +
                 " u.firstName as firstName, u.classes as idClasse ";
@@ -908,9 +908,9 @@ public class DefaultUserService extends SqlCrudService implements UserService {
 
 
         if (userId != null) {
-            neo4jquery = "MATCH (u:User)-[:IN]->(:ProfileGroup)-[:DEPENDS]->(c:Class)-[:BELONGS]->(s:Structure {id:{structureId}}), " +
-                    "(t:User {id: {userId}})-[:IN]->(:ProfileGroup)-[:DEPENDS]->(c) " +
-                    "WHERE u.profiles = {profiles} " +
+            neo4jquery = "MATCH (u:User)-[:IN]->(:ProfileGroup)-[:DEPENDS]->(c:Class)-[:BELONGS]->(s:Structure {id:$structureId}), " +
+                    "(t:User {id: $userId})-[:IN]->(:ProfileGroup)-[:DEPENDS]->(c) " +
+                    "WHERE u.profiles = $profiles " +
                     "AND (" + filter.toString().replaceFirst("OR ", "") + ") " +
                     "RETURN distinct u.id as id, (u.lastName + ' ' + u.firstName) as displayName, u.lastName as lastName, " +
                     "u.firstName as firstName, u.classes as idClasse, collect(c.name) as classesNames " +

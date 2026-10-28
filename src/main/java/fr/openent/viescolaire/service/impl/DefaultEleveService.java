@@ -65,7 +65,7 @@ public class DefaultEleveService extends SqlCrudService implements EleveService 
                 .append( " u.classes as classes, c.name as className ORDER BY lastName");
         StringBuilder query = new StringBuilder();
 
-        query.append(" MATCH (c:Class{id: {idClasse} })-[b:BELONGS]->(s)  with c, s ")
+        query.append(" MATCH (c:Class{id: $idClasse })-[b:BELONGS]->(s)  with c, s ")
                 .append(" MATCH (u:User {profiles:[\"Student\"]})-[:IN]->(:ProfileGroup)-[:DEPENDS]->(s) ")
                 .append(" where c.externalId IN u.classes  ")
                 .append(returning)
@@ -73,7 +73,7 @@ public class DefaultEleveService extends SqlCrudService implements EleveService 
                 .append(" UNION ")
 
                 .append(" MATCH (u:User{profiles:[\"Student\"]})-[IN]->(d:DeleteGroup), ")
-                .append(" (c:Class{id: {idClasse})-[b:BELONGS]->(s) ")
+                .append(" (c:Class{id: $idClasse)-[b:BELONGS]->(s) ")
                 .append(returning);
 
 
@@ -105,7 +105,7 @@ public class DefaultEleveService extends SqlCrudService implements EleveService 
     @Override
     public void getEleve(String idEtab,  Handler<Either<String, JsonArray>> handler) {
         StringBuilder query = new StringBuilder();
-        query.append(" MATCH (u:User)-[r:ADMINISTRATIVE_ATTACHMENT]->(s:Structure) where u.profiles= [\"Student\"] and s.id = {idEtab}  with u ")
+        query.append(" MATCH (u:User)-[r:ADMINISTRATIVE_ATTACHMENT]->(s:Structure) where u.profiles= [\"Student\"] and s.id = $idEtab  with u ")
                 .append("Optional MATCH (g:FunctionalGroup)<-[IN]-(u) ")
                 .append("RETURN u.id as id, u.firstName as firstName, u.lastName as lastName, u.birthDate as birthDate, u.level as level, collect(g.id) as groupesId, u.classes as classesId  ");
         neo4j.execute(query.toString(), new JsonObject().put("idEtab", idEtab), Neo4jResult.validResultHandler(handler));
@@ -114,7 +114,7 @@ public class DefaultEleveService extends SqlCrudService implements EleveService 
     @Override
     public void getEleves(String idEtab,  Handler<Either<String, JsonArray>> handler) {
         StringBuilder query = new StringBuilder();
-        query.append(" MATCH (f:FunctionalGroup)<-[i:IN]-(u:User)-[r:ADMINISTRATIVE_ATTACHMENT]->(s:Structure) where u.profiles= [\"Student\"] and s.id = {idEtab}  with u, collect(f.id) as f ")
+        query.append(" MATCH (f:FunctionalGroup)<-[i:IN]-(u:User)-[r:ADMINISTRATIVE_ATTACHMENT]->(s:Structure) where u.profiles= [\"Student\"] and s.id = $idEtab  with u, collect(f.id) as f ")
                 .append("Match (c:Class) where c.externalId IN u.classes ")
                 .append("RETURN u.id as id, u.firstName as firstName, u.lastName as lastName,  u.level as level, collect(c.id) as classes ,f as groupes");
         neo4j.execute(query.toString(), new JsonObject().put("idEtab", idEtab), Neo4jResult.validResultHandler(handler));
@@ -126,7 +126,7 @@ public class DefaultEleveService extends SqlCrudService implements EleveService 
         JsonObject params = new JsonObject();
 
         query.append("MATCH (u:User {profiles: ['Student']})-[:RELATED]->(r:User {profiles: ['Relative']}) ")
-                .append("WHERE u.id= {idEleve} ")
+                .append("WHERE u.id= $idEleve ")
                 .append("RETURN r.id AS id, r.address AS address, r.city AS city, r.zipCode AS zipCode, r.country AS country, ")
                 .append("r.lastName AS lastName, r.firstName AS firstName, r.homePhone AS homePhone, r.workPhone AS workPhone, r.mobilePhone AS mobilePhone");
         params.put("idEleve", idEleve);
@@ -138,7 +138,7 @@ public class DefaultEleveService extends SqlCrudService implements EleveService 
         StringBuilder query = new StringBuilder();
         JsonObject params = new JsonObject();
 
-        query.append(" MATCH (u:User {id:{idEleve}}), ")
+        query.append(" MATCH (u:User {id:$idEleve}), ")
                 .append("(s:Structure)<-[:SUBJECT]-(f:Subject)<-[r:TEACHES]-(ens:User)")
                 .append("  WHERE f.code in u.fieldOfStudy and s.externalId in u.structures ")
                 .append(" WITH u, r, ens, f, s ")
@@ -163,7 +163,7 @@ public class DefaultEleveService extends SqlCrudService implements EleveService 
         // Condition de récupération des noeuds
         StringBuilder condition = new StringBuilder()
                 .append(" WHERE ")
-                .append(" u.id IN {idEleves}");
+                .append(" u.id IN $idEleves");
 
         StringBuilder order = new StringBuilder()
                 .append(" ORDER BY lastName, firstName ");
@@ -172,7 +172,7 @@ public class DefaultEleveService extends SqlCrudService implements EleveService 
         JsonObject params = new JsonObject();
 
         // Récupération d'élèves non supprimés
-        query.append("MATCH (u:User {profiles:[\"Student\"]})-[:IN]->(:ProfileGroup)-[:DEPENDS]->(c:Class)-[b:BELONGS]->(s:Structure {id:{idStructure}}) ")
+        query.append("MATCH (u:User {profiles:[\"Student\"]})-[:IN]->(:ProfileGroup)-[:DEPENDS]->(c:Class)-[b:BELONGS]->(s:Structure {id:$idStructure}) ")
                 .append(condition)
                 .append(" with u, c, s")
                 .append(" OPTIONAL MATCH (f:FunctionalGroup)<-[i:IN]-(u) with  u, c, s, f")
@@ -213,7 +213,7 @@ public class DefaultEleveService extends SqlCrudService implements EleveService 
         StringBuilder query = new StringBuilder();
         JsonObject params = new JsonObject();
 
-        query.append("MATCH (u:`User`) WHERE u.id IN {idUsers} ")
+        query.append("MATCH (u:`User`) WHERE u.id IN $idUsers ")
                 .append("RETURN u.id as id, u.firstName as firstName, u.lastName as name, u.displayName as displayName, ")
                 .append("u.birthDate AS birthDate, u as data ");
         params.put("idUsers", idUsers);
@@ -379,10 +379,10 @@ public class DefaultEleveService extends SqlCrudService implements EleveService 
         StringBuilder query = new StringBuilder();
         JsonObject params = new JsonObject();
 
-        query.append("MATCH (n:FunctionalGroup)-[:IN]-(u:User{id:{userId}}) ")
+        query.append("MATCH (n:FunctionalGroup)-[:IN]-(u:User{id:$userId}) ")
                 .append(" WITH  n, u ")
                 .append(" MATCH (c:Class) WHERE c.externalId IN u.classes RETURN n.id as id_groupe ")
-                .append(" UNION MATCH (n:ManualGroup)-[:IN]-(u:User{id:{userId}}) ")
+                .append(" UNION MATCH (n:ManualGroup)-[:IN]-(u:User{id:$userId}) ")
                 .append(" WITH  n, u ")
                 .append(" MATCH (c:Class) WHERE c.externalId IN u.classes RETURN n.id as id_groupe ");
         params.put("userId", idEleve);
@@ -512,7 +512,7 @@ public class DefaultEleveService extends SqlCrudService implements EleveService 
     @Override
     public void getResponsable(String idEleve, Handler<Either<String,JsonArray>> handler){
         StringBuilder query = new StringBuilder();
-        query.append("MATCH (u:User {id: {idEleve}})-[:RELATED]-(r:User{profiles:['Relative']}) ")
+        query.append("MATCH (u:User {id: $idEleve})-[:RELATED]-(r:User{profiles:['Relative']}) ")
                 .append(" RETURN u.id as idNeo4j, u.externalId as externalId,u.attachmentId as attachmentId,")
                 .append(" u.lastName as lastName,u.level as level,u.firstName as firstName,u.relative as relative,")
                 .append(" r.externalId as externalIdRelative, r.title as civilite, r.lastName as lastNameRelative, ")
@@ -548,20 +548,20 @@ public class DefaultEleveService extends SqlCrudService implements EleveService 
     @Override
     public void getStudentsFromStructure(String structureId, Integer page, List<String> studentId, List<String> groupNames,
                                          Boolean crossFilter, Handler<Either<String, JsonArray>> handler) {
-        String query = "MATCH (s:Structure {id: {structureId}})" +
+        String query = "MATCH (s:Structure {id: $structureId})" +
                 "<-[:BELONGS]-(c:Class)<-[:DEPENDS]-(:ProfileGroup)" +
                 "<-[:IN]-(u:User {profiles:['Student']}) ";
 
         if (groupNames != null && groupNames.size() > 0) {
-            query += "WHERE c.name IN {audienceNames} ";
+            query += "WHERE c.name IN $audienceNames ";
         }
 
         if (studentId != null && studentId.size() > 0) {
             if (groupNames == null || groupNames.size() == 0) {
-                query += "WHERE u.id IN {studentId} ";
+                query += "WHERE u.id IN $studentId ";
             } else {
                 query += (crossFilter != null && crossFilter) ? "AND" : "OR";
-                query += " u.id IN {studentId} ";
+                query += " u.id IN $studentId ";
             }
         }
 
@@ -591,7 +591,7 @@ public class DefaultEleveService extends SqlCrudService implements EleveService 
 
     @Override
     public void getPrimaryRelatives(JsonArray studentIds, Handler<Either<String, JsonArray>> handler) {
-        String query = "MATCH(u:User)-[:RELATED]->(v:User) WHERE u.id IN {studentIds} " +
+        String query = "MATCH(u:User)-[:RELATED]->(v:User) WHERE u.id IN $studentIds " +
                 "RETURN u.id AS studentId, u.relative AS relativesCodes, u.primaryRelatives AS primaryRelatives, " +
                 "collect({id: v.id, externalId: v.externalId}) AS relatives";
 

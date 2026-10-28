@@ -72,7 +72,7 @@ public class DefaultInitService implements InitService {
     public Future<InitTeachers> getTeachersStatus(String structureId) {
         Promise<InitTeachers> promise = Promise.promise();
 
-        String query = "MATCH (u:User)-[:IN]->(pg:ProfileGroup)-[:DEPENDS]->(s:Structure {id: {structureId}}) " +
+        String query = "MATCH (u:User)-[:IN]->(pg:ProfileGroup)-[:DEPENDS]->(s:Structure {id: $structureId}) " +
                 "WHERE 'Teacher' IN u.profiles " +
                 "AND NOT (u)-[:IN]->(:Group)-[:DEPENDS]->(:Class)-[:BELONGS]->(s) " +
                 "RETURN u.id AS id, u.displayName AS displayName " +

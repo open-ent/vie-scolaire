@@ -170,7 +170,7 @@ public class DefaultTrombinoscopeExportService implements TrombinoscopeExportSer
         if (studentIds.isEmpty()) {
             return Future.succeededFuture(new HashSet<>());
         }
-        String query = "MATCH (u:User) WHERE u.id IN {studentIds} "
+        String query = "MATCH (u:User) WHERE u.id IN $studentIds "
                 + "MATCH (u)-[:USERBOOK]->(ub:UserBook) WHERE ub.picture IS NOT NULL "
                 + "RETURN u.id as id";
         JsonObject params = new JsonObject().put("studentIds", new JsonArray(studentIds));

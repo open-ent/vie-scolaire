@@ -31,7 +31,7 @@ public class StructureServiceTest {
 
     @Test
     public void retrieveStructureInfo_should_use_correct_request(TestContext ctx) {
-        String CORRECT_REQUEST = "MATCH (s:Structure {id: {id}}) RETURN s.id as id, s.name as name, s.UAI as UAI";
+        String CORRECT_REQUEST = "MATCH (s:Structure {id: $id}) RETURN s.id as id, s.name as name, s.UAI as UAI";
         String structureId1 = "structureId1";
 
         Mockito.doAnswer((Answer<Void>) invocation -> {

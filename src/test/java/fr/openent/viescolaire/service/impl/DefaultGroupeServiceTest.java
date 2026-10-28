@@ -39,12 +39,12 @@ public class DefaultGroupeServiceTest {
         Async async = ctx.async();
         List<String> fields = Arrays.asList("name", "id", "student");
 
-        String expectedQuery = "MATCH (u:User {id:{userId}})-[:IN]->(:ProfileGroup)-[:DEPENDS]->(g: Class)-[:BELONGS]->(s:Structure {id:{structureId}})" +
-                " WHERE toLower(g.name) CONTAINS {query} OR toLower(g.id) CONTAINS {query} OR toLower(g.name) CONTAINS {query}" +
+        String expectedQuery = "MATCH (u:User {id:$userId})-[:IN]->(:ProfileGroup)-[:DEPENDS]->(g: Class)-[:BELONGS]->(s:Structure {id:$structureId})" +
+                " WHERE toLower(g.name) CONTAINS $query OR toLower(g.id) CONTAINS $query OR toLower(g.name) CONTAINS $query" +
                 " RETURN g.id as id, g.name as name ORDER BY g.name UNION MATCH (u:User" +
-                " {profiles:['Student']})--(:ProfileGroup)--(c:Class)--(:ProfileGroup)--(t:User {id:{userId}}) WITH u, c" +
-                " MATCH (u)--(g)-[:DEPENDS]->(s:Structure {id:{structureId}}) WHERE (g:FunctionalGroup) AND toLower(g.name)" +
-                " CONTAINS {query} OR toLower(g.id) CONTAINS {query} OR toLower(g.name) CONTAINS {query} RETURN DISTINCT" +
+                " {profiles:['Student']})--(:ProfileGroup)--(c:Class)--(:ProfileGroup)--(t:User {id:$userId}) WITH u, c" +
+                " MATCH (u)--(g)-[:DEPENDS]->(s:Structure {id:$structureId}) WHERE (g:FunctionalGroup) AND toLower(g.name)" +
+                " CONTAINS $query OR toLower(g.id) CONTAINS $query OR toLower(g.name) CONTAINS $query RETURN DISTINCT" +
                 " g.id as id, g.name as name ORDER BY g.name";
         String expectedResult = "{\"structureId\":\"structureId\",\"userId\":\"userId\",\"query\":\"query\"}";
         Mockito.doAnswer((Answer<Void>) invocation -> {
@@ -63,9 +63,9 @@ public class DefaultGroupeServiceTest {
     public void testGetNameOfGroupClass(TestContext ctx) {
         Async async = ctx.async();
 
-        String expectedQuery = "MATCH (c:`Class`) WHERE c.id IN {idsAudience} RETURN c.id as id,  c.name as name UNION " +
-                "MATCH (g:`FunctionalGroup`) WHERE g.id IN {idsAudience} return g.id as id, g.name as name UNION MATCH " +
-                "(g:`ManualGroup`) WHERE g.id IN {idsAudience} return g.id as id, g.name as name ";
+        String expectedQuery = "MATCH (c:`Class`) WHERE c.id IN $idsAudience RETURN c.id as id,  c.name as name UNION " +
+                "MATCH (g:`FunctionalGroup`) WHERE g.id IN $idsAudience return g.id as id, g.name as name UNION MATCH " +
+                "(g:`ManualGroup`) WHERE g.id IN $idsAudience return g.id as id, g.name as name ";
         String expectedResult = "{\"idsAudience\":[\"id1\",\"id2\"]}";
         Mockito.doAnswer((Answer<Void>) invocation -> {
             String queryResult = invocation.getArgument(0);
@@ -82,7 +82,7 @@ public class DefaultGroupeServiceTest {
     public void testIsGroupExist(TestContext ctx) {
         Async async = ctx.async();
 
-        String expectedQuery = "MATCH (g:`Group` {id: {groupeId}}) WITH COUNT(g) > 0 as node_exists RETURN node_exists";
+        String expectedQuery = "MATCH (g:`Group` {id: $groupeId}) WITH COUNT(g) > 0 as node_exists RETURN node_exists";
         String expectedResult = "{\"groupId\":\"id1\"}";
         Mockito.doAnswer((Answer<Void>) invocation -> {
             String queryResult = invocation.getArgument(0);

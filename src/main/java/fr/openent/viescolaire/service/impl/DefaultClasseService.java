@@ -76,7 +76,7 @@ public class DefaultClasseService extends SqlCrudService implements ClasseServic
         StringBuilder query = new StringBuilder();
         JsonObject params = new JsonObject();
 
-        query.append("MATCH (c:Class)-[BELONGS]->(s:Structure) WHERE s.id = {idEtablissement} RETURN c.id as idClasse ORDER BY c.name");
+        query.append("MATCH (c:Class)-[BELONGS]->(s:Structure) WHERE s.id = $idEtablissement RETURN c.id as idClasse ORDER BY c.name");
         params.put("idEtablissement", idEtablissement);
 
         neo4j.execute(query.toString(), params, Neo4jResult.validResultHandler(handler));
@@ -93,14 +93,14 @@ public class DefaultClasseService extends SqlCrudService implements ClasseServic
                 .append("ORDER BY lastName, firstName ");
 
         StringBuilder query = new StringBuilder()
-                .append("MATCH (c:Class{id:{idClasse}})<-[:DEPENDS]-(:ProfileGroup)<-[:IN]-(u:User {profiles:['Student']}) ")
+                .append("MATCH (c:Class{id:$idClasse})<-[:DEPENDS]-(:ProfileGroup)<-[:IN]-(u:User {profiles:['Student']}) ")
                 .append(returning)
-                .append("UNION MATCH (c:FunctionalGroup {id :{idClasse}})-[:IN]-(u:User {profiles: ['Student']}) ")
+                .append("UNION MATCH (c:FunctionalGroup {id :$idClasse})-[:IN]-(u:User {profiles: ['Student']}) ")
                 .append(returning)
-                .append("UNION MATCH (c:ManualGroup {id :{idClasse}})-[:IN]-(u:User {profiles: ['Student']}) ")
+                .append("UNION MATCH (c:ManualGroup {id :$idClasse})-[:IN]-(u:User {profiles: ['Student']}) ")
                 .append(returning)
-                .append("UNION MATCH (u:User {profiles: ['Student']})-[:HAS_RELATIONSHIPS]->(b:Backup), (c:Class {id :{idClasse}}) ")
-                .append("WHERE HAS(u.deleteDate) AND (c.externalId IN u.groups OR c.externalId IN u.classes) ")
+                .append("UNION MATCH (u:User {profiles: ['Student']})-[:HAS_RELATIONSHIPS]->(b:Backup), (c:Class {id :$idClasse}) ")
+                .append("WHERE u.deleteDate IS NOT NULL AND (c.externalId IN u.groups OR c.externalId IN u.classes) ")
                 .append(returning);
 
         String[] sortedField = new String[2];
@@ -118,11 +118,11 @@ public class DefaultClasseService extends SqlCrudService implements ClasseServic
         JsonObject values = new JsonObject();
 
         query.append("MATCH (u:User)-[:IN]-(:ProfileGroup)--(f:Class) WHERE u.profiles=[\"Student\"] " +
-                " AND f.id IN {idClasse} RETURN f.id as id_groupe, count(distinct u) as nb " +
+                " AND f.id IN $idClasse RETURN f.id as id_groupe, count(distinct u) as nb " +
                 " UNION ALL MATCH (u:User)--(f:FunctionalGroup) WHERE u.profiles=[\"Student\"] " +
-                " AND f.id IN {idGroupe} RETURN f.id as id_groupe, count(distinct u) as nb " +
+                " AND f.id IN $idGroupe RETURN f.id as id_groupe, count(distinct u) as nb " +
                 " UNION ALL MATCH (u:User)--(f:ManualGroup) WHERE u.profiles=[\"Student\"] " +
-                " AND f.id IN {idGroupe} RETURN f.id as id_groupe, count(distinct u) as nb ");
+                " AND f.id IN $idGroupe RETURN f.id as id_groupe, count(distinct u) as nb ");
 
         values.put(mParameterIdClasse, idGroupes);
         values.put("idGroupe", idGroupes);
@@ -140,7 +140,7 @@ public class DefaultClasseService extends SqlCrudService implements ClasseServic
         // Rajout de filtre pour les enseignants
         String filter = " ";
         if (isTeacher) {
-            filter = " AND c.id IN {idClasse} ";
+            filter = " AND c.id IN $idClasse ";
             params.put(mParameterIdClasse, idClasse);
         }
 
@@ -152,7 +152,7 @@ public class DefaultClasseService extends SqlCrudService implements ClasseServic
 
         // Requête Néo
         StringBuilder query = new StringBuilder()
-                .append(" MATCH (u:User {profiles: ['Student']})-[ADMINISTRATIVE_ATTACHMENT]->(s:Structure {id:{idEtablissement}})<-[b:BELONGS]-(c:Class) ")
+                .append(" MATCH (u:User {profiles: ['Student']})-[ADMINISTRATIVE_ATTACHMENT]->(s:Structure {id:$idEtablissement})<-[b:BELONGS]-(c:Class) ")
                 .append(" WHERE c.externalId IN u.classes AND s.externalId IN u.structures ")
                 .append(filter)
                 .append(returning)
@@ -161,7 +161,7 @@ public class DefaultClasseService extends SqlCrudService implements ClasseServic
 
                 // Récupération des élèves supprimés mais présents dans l'annuaire
                 .append(" MATCH (u:User{profiles:['Student']})-[IN]->(d:DeleteGroup), ")
-                .append(" (s:Structure {id:{idEtablissement}}) ")
+                .append(" (s:Structure {id:$idEtablissement}) ")
                 .append(" WHERE s.externalId IN u.structures ")
                 .append(" OPTIONAL MATCH (c:Class)-[b:BELONGS]->(s) ")
                 .append(" WHERE  c.externalId IN u.classes ")
@@ -190,17 +190,17 @@ public class DefaultClasseService extends SqlCrudService implements ClasseServic
         String queryLastGroup = "MATCH (s:Structure)<-[:SUBJECT]-(sub:Subject)<-[r:TEACHES]-(u:User) WHERE ";
         //malformed class filter
         String filterClass = " AND m.name IS NOT NULL ";
-        String paramEtab = "s.id = {idStructure} ";
-        String paramClass = "m.id IN {classes} ";
-        String paramGroup = "m.id IN {groups} ";
-        String paramUser = "u.id = {userId} ";
+        String paramEtab = "s.id = $idStructure ";
+        String paramClass = "m.id IN $classes ";
+        String paramGroup = "m.id IN $groups ";
+        String paramUser = "u.id = $userId ";
 
         String paramGroupManuel;
         if (null == user || forAdmin) {
             paramGroupManuel = paramEtab + filterClass;
 
             if (null == user && idClassesAndGroups != null) {
-                paramGroupManuel += " m.id IN {idClassesAndGroups}";
+                paramGroupManuel += " m.id IN $idClassesAndGroups";
             }
         } else {
             paramGroupManuel = paramGroup + " AND " + paramEtab + filterClass;
@@ -209,10 +209,10 @@ public class DefaultClasseService extends SqlCrudService implements ClasseServic
         // On date -> 08/02/2020 / 23:09, try a fix based on DBOI mail
         String queryGroupManuel = "MATCH (s:Structure)<-[:DEPENDS]-(m:ManualGroup)<-[:IN]-(:User{profiles: ['Student']})" +
                 " WHERE " + paramGroupManuel +
-                " AND m<-[:IN]-(:User {profiles: ['Teacher']}) RETURN m " +
-                " UNION MATCH (s:Structure{id:{idStructure}})<-[:BELONGS]-(:Class)<-[:DEPENDS]-(m:ManualGroup)<-[:IN]-(:User {profiles: ['Student']})" +
+                " AND (m)<-[:IN]-(:User {profiles: ['Teacher']}) RETURN m " +
+                " UNION MATCH (s:Structure{id:$idStructure})<-[:BELONGS]-(:Class)<-[:DEPENDS]-(m:ManualGroup)<-[:IN]-(:User {profiles: ['Student']})" +
                 " WHERE " + paramGroupManuel +
-                " AND m<-[:IN]-(:User {profiles: ['Teacher']}) RETURN distinct(m) ";
+                " AND (m)<-[:IN]-(:User {profiles: ['Teacher']}) RETURN distinct(m) ";
 
         String returnLastGroup = "WITH r.groups as libelleClasses, s, u, sub MATCH (s)--(c) " +
                 "WHERE (c:FunctionalGroup OR c:ManualGroup) AND ALL(x IN c.externalId WHERE x in libelleClasses) " +
@@ -269,24 +269,24 @@ public class DefaultClasseService extends SqlCrudService implements ClasseServic
                 " u.lastName, u.firstName ";
 
         query.append("MATCH (u:User {profiles: ['Student']})-[:IN]-(:ProfileGroup)-[:DEPENDS]-(c:Class) ")
-                .append(" WHERE c.id IN {idClasses} ")
+                .append(" WHERE c.id IN $idClasses ")
                 .append(RETURNING)
                 .append(" UNION MATCH (u:User {profiles: ['Student']})-[:IN]-(c:FunctionalGroup) ")
-                .append(" WHERE c.id IN {idClasses} ")
+                .append(" WHERE c.id IN $idClasses ")
                 .append(RETURNING)
                 .append(" UNION MATCH (u:User {profiles: ['Student']})-[:IN]-(c:ManualGroup) ")
-                .append(" WHERE c.id IN {idClasses} ")
+                .append(" WHERE c.id IN $idClasses ")
                 .append(RETURNING)
                 .append(" UNION MATCH (u:User {profiles: ['Student']})-[:HAS_RELATIONSHIPS]->(b:Backup), ")
                 .append(" (c:Group)")
-                .append(" WHERE HAS(u.deleteDate) ")
-                .append(" AND (c.id IN {idClasses} ")
+                .append(" WHERE u.deleteDate IS NOT NULL ")
+                .append(" AND (c.id IN $idClasses ")
                 .append(" AND (c.externalId IN u.groups) ) ")
                 .append(RETURNING)
                 .append(" UNION MATCH (u:User {profiles: ['Student']})-[:HAS_RELATIONSHIPS]->(b:Backup),")
                 .append(" (c:Class)")
-                .append(" WHERE HAS(u.deleteDate) ")
-                .append(" AND (c.id IN {idClasses} ")
+                .append(" WHERE u.deleteDate IS NOT NULL ")
+                .append(" AND (c.id IN $idClasses ")
                 .append(" AND  c.externalId IN u.classes) ")
                 .append(RETURNING);
 
@@ -308,14 +308,14 @@ public class DefaultClasseService extends SqlCrudService implements ClasseServic
     public void getEtabClasses(String[] idClasses, Handler<Either<String, JsonArray>> handler) {
         StringBuilder query = new StringBuilder();
         JsonObject params = new JsonObject();
-        query.append("MATCH (g:Class)-[:BELONGS]->(s:Structure) WHERE g.id IN {idClasses} ")
+        query.append("MATCH (g:Class)-[:BELONGS]->(s:Structure) WHERE g.id IN $idClasses ")
                 .append(" return DISTINCT(s.id) AS idStructure, COLLECT(g.id) AS idClasses ")
-                .append(" UNION MATCH (g:FunctionalGroup)-[:DEPENDS]->(s:Structure) WHERE g.id IN {idClasses} ")
+                .append(" UNION MATCH (g:FunctionalGroup)-[:DEPENDS]->(s:Structure) WHERE g.id IN $idClasses ")
                 .append(" return DISTINCT(s.id) AS idStructure, COLLECT(g.id) AS idClasses ")
-                .append(" UNION MATCH (g:ManualGroup)-[:DEPENDS]->(s:Structure) WHERE g.id IN {idClasses} ")
+                .append(" UNION MATCH (g:ManualGroup)-[:DEPENDS]->(s:Structure) WHERE g.id IN $idClasses ")
                 .append(" return DISTINCT(s.id) AS idStructure, COLLECT(g.id) AS idClasses")
                 .append(" UNION MATCH (g:ManualGroup)-[:DEPENDS]->(:Class)-[BELONGS]->(s:Structure) ")
-                .append(" WHERE g.id IN {idClasses} ")
+                .append(" WHERE g.id IN $idClasses ")
                 .append(" return DISTINCT(s.id) AS idStructure, COLLECT(g.id) AS idClasses");
         params.put("idClasses", new JsonArray(Arrays.asList(idClasses)));
 
@@ -334,7 +334,7 @@ public class DefaultClasseService extends SqlCrudService implements ClasseServic
         StringBuilder query = new StringBuilder();
         JsonObject params = new JsonObject();
         query.append(" MATCH (u:User)-[r:ADMINISTRATIVE_ATTACHMENT]->(s:Structure) where u.profiles= [\"Student\"] ")
-                .append(" and u.id={idEleve}  and s.id={idEtablissement} ")
+                .append(" and u.id=$idEleve  and s.id=$idEtablissement ")
                 .append(" with u  ")
                 .append(" Match  (c:Class) where  c.externalId IN u.classes ")
                 .append(" with   c, u ")
@@ -352,9 +352,9 @@ public class DefaultClasseService extends SqlCrudService implements ClasseServic
     public void getClasseInfo(String idClasse, Handler<Either<String, JsonObject>> handler) {
 
         JsonObject params = new JsonObject();
-        String query = "MATCH (c:Class {id: {idClasse}}) RETURN c " +
-                "UNION MATCH (c:FunctionalGroup {id: {idClasse}}) RETURN c " +
-                "UNION MATCH (c:ManualGroup {id: {idClasse}}) RETURN c";
+        String query = "MATCH (c:Class {id: $idClasse}) RETURN c " +
+                "UNION MATCH (c:FunctionalGroup {id: $idClasse}) RETURN c " +
+                "UNION MATCH (c:ManualGroup {id: $idClasse}) RETURN c";
 
         params.put("idClasse", idClasse);
         try {
@@ -382,9 +382,9 @@ public class DefaultClasseService extends SqlCrudService implements ClasseServic
         JsonObject params = new JsonObject();
         String returning = "RETURN c.id as id, c.name as name, c.externalId as externalId, labels(c) AS labels";
 
-        String queries = "MATCH (c:Class) WHERE  c.id IN {idClasses} " + returning +
-                " UNION MATCH (c:FunctionalGroup) WHERE  c.id IN {idClasses} " + returning +
-                " UNION MATCH (c:ManualGroup) WHERE  c.id IN {idClasses}  " + returning;
+        String queries = "MATCH (c:Class) WHERE  c.id IN $idClasses " + returning +
+                " UNION MATCH (c:FunctionalGroup) WHERE  c.id IN $idClasses " + returning +
+                " UNION MATCH (c:ManualGroup) WHERE  c.id IN $idClasses  " + returning;
 
         params.put("idClasses", idClasses);
         neo4j.execute(queries, params, Neo4jResult.validResultHandler(handler));
@@ -410,8 +410,8 @@ public class DefaultClasseService extends SqlCrudService implements ClasseServic
         JsonObject params = new JsonObject();
 
         query.append("MATCH (u:User {profiles:['Student']})--(:ProfileGroup)--(c:Class)--(s:Structure) ")
-                .append("WHERE c.id IN {idClasses} ")
-                .append("WITH u, c, s OPTIONAL MATCH (u)--(g)--(s) WHERE (g:FunctionalGroup OR g:ManualGroup) AND NOT EXISTS (g.autolinkUsersFromGroups) ")
+                .append("WHERE c.id IN $idClasses ")
+                .append("WITH u, c, s OPTIONAL MATCH (u)--(g)--(s) WHERE (g:FunctionalGroup OR g:ManualGroup) AND NOT g.autolinkUsersFromGroups IS NOT NULL ")
                 .append("RETURN c.id as id_classe, c.name as name_classe, COLLECT(DISTINCT g.id) AS id_groupes");
         params.put("idClasses", new JsonArray(Arrays.asList(idClasses)));
 
@@ -501,7 +501,7 @@ public class DefaultClasseService extends SqlCrudService implements ClasseServic
     @Override
     public void getClasseIdByEleve(String idEleve, Handler<Either<String, JsonObject>> handler) {
         StringBuilder query = new StringBuilder()
-                .append("MATCH (u:User {id :{id_eleve}}) with u MATCH (c:Class) ")
+                .append("MATCH (u:User {id :$id_eleve}) with u MATCH (c:Class) ")
                 .append("WHERE c.externalId IN u.classes return c");
 
 
@@ -553,9 +553,9 @@ public class DefaultClasseService extends SqlCrudService implements ClasseServic
 
     @Override
     public void getHeadTeachers(String idClasse, Handler<Either<String, JsonArray>> handler) {
-        StringBuilder query = new StringBuilder().append(" MATCH (c:Class {id:{idClasse}}) ")
+        StringBuilder query = new StringBuilder().append(" MATCH (c:Class {id:$idClasse}) ")
                 .append(" OPTIONAL MATCH (u:User {profiles: ['Teacher']})-[:IN]-(:ProfileGroup)-[:DEPENDS]")
-                .append("-(c:Class {id :{idClasse}}) ")
+                .append("-(c:Class {id :$idClasse}) ")
                 .append(" WHERE (c.externalId IN u.headTeacher OR  c.externalId IN u.headTeacherManual) ")
                 .append(" RETURN CASE WHEN u.title IS NULL THEN \" \" ELSE u.title END as civility, ")
                 .append(" u.lastName as name, u.firstName as firstName, u.birthDate as birthDate, u.id as id ");
@@ -570,7 +570,7 @@ public class DefaultClasseService extends SqlCrudService implements ClasseServic
         JsonObject params = new JsonObject();
 
         query.append("MATCH (u:User {profiles:['Student']})--(:ProfileGroup)--(c:Class) ")
-                .append("WHERE c.id IN {idClasses} ")
+                .append("WHERE c.id IN $idClasses ")
                 .append("WITH u, c MATCH (u)--(g) WHERE g:FunctionalGroup OR g:ManualGroup ")
                 .append("RETURN c.id as id_classe, c.name as name_classe, COLLECT(DISTINCT g.name) AS name_groups ,COLLECT(DISTINCT g.id) as id_groups");
         params.put("idClasses", new JsonArray(Arrays.asList(idClasses)));
@@ -580,7 +580,7 @@ public class DefaultClasseService extends SqlCrudService implements ClasseServic
 
     @Override
     public void getGroupFromStudents(String[] studentIds, Handler<Either<String, JsonArray>> handler) {
-        String where = " WHERE u.id IN {studentIds} ";
+        String where = " WHERE u.id IN $studentIds ";
 
         StringBuilder profileGroupMatch = new StringBuilder("")
                 .append(" MATCH (u:User {profiles:['Student']})-[:IN]-(g:ProfileGroup)-[:DEPENDS]-(c:Class)--(s:Structure) ")
@@ -836,17 +836,17 @@ public class DefaultClasseService extends SqlCrudService implements ClasseServic
         JsonObject params = new JsonObject();
 
         String query = " MATCH(s:Structure)<-[:DEPENDS]-(n:FunctionalGroup)<-[:IN]-(u:User{profiles:['Student']}) " +
-                " WHERE n.id IN {idsAudience} WITH s, n, u " +
+                " WHERE n.id IN $idsAudience WITH s, n, u " +
                 " MATCH (c:Class)-[:BELONGS]->(s) WHERE c.externalId IN u.classes RETURN n.id as id_audience, " +
                 " c.id AS id_classes " +
                 " UNION " +
                 " MATCH (s:Structure)<-[:DEPENDS]-(n:ManualGroup)<-[:IN]-(u:User{profiles:['Student']}) " +
-                " WHERE n.id IN {idsAudience} WITH  s, n, u " +
+                " WHERE n.id IN $idsAudience WITH  s, n, u " +
                 " MATCH (c:Class)-[:BELONGS]->(s) WHERE c.externalId IN u.classes RETURN n.id as id_audience, " +
                 " c.id AS id_classes " +
                 " UNION " +
                 " MATCH (c:Class) " +
-                " WHERE c.id IN {idsAudience} " +
+                " WHERE c.id IN $idsAudience " +
                 " RETURN c.id AS id_audience, c.id AS id_classes ";
         params.put("idsAudience", audiences)
                 .put("idsAudience", audiences)

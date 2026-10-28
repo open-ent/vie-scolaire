@@ -102,10 +102,10 @@ public class DefaultUtilsService implements UtilsService{
         StringBuilder query = new StringBuilder();
         JsonObject values = new JsonObject();
 
-        query.append("MATCH (c:Class) WHERE c.id IN {id_classes} RETURN c.id AS id, c IS NOT NULL AS isClass UNION ")
-                .append(" MATCH (g:FunctionalGroup) WHERE g.id IN {id_classes} RETURN g.id AS id, NOT(g IS NOT NULL) ")
+        query.append("MATCH (c:Class) WHERE c.id IN $id_classes RETURN c.id AS id, c IS NOT NULL AS isClass UNION ")
+                .append(" MATCH (g:FunctionalGroup) WHERE g.id IN $id_classes RETURN g.id AS id, NOT(g IS NOT NULL) ")
                 .append(" AS isClass UNION")
-                .append(" MATCH (g:ManualGroup) WHERE g.id IN {id_classes} RETURN g.id AS id, NOT(g IS NOT NULL) ")
+                .append(" MATCH (g:ManualGroup) WHERE g.id IN $id_classes RETURN g.id AS id, NOT(g IS NOT NULL) ")
                 .append(" AS isClass ");
 
         values.put("id_classes", new JsonArray(Arrays.asList(id_classes)))
@@ -515,7 +515,7 @@ public class DefaultUtilsService implements UtilsService{
             StringBuilder query = new StringBuilder();
             JsonObject params = new JsonObject();
 
-            query.append("MATCH (c:Class)-[BELONGS]->(s:Structure) WHERE c.id IN {idClasses} ")
+            query.append("MATCH (c:Class)-[BELONGS]->(s:Structure) WHERE c.id IN $idClasses ")
                     .append(" RETURN c.id as idClasse, c.name as name ORDER BY c.name ");
             params.put("idClasses", new JsonArray(Arrays.asList(idClasses)));
 
@@ -534,10 +534,10 @@ public class DefaultUtilsService implements UtilsService{
     public void getIdGroupByExternalId(List<String> externalIdGroups, Handler<Either<String, JsonArray>> handler){
         StringBuilder query = new StringBuilder();
         query.append("MATCH (g:Group) " +
-                "WHERE g.externalId IN {id} " +
+                "WHERE g.externalId IN $id " +
                 "RETURN g.id as id, g.externalId as externalId " +
                 "UNION MATCH (c:Class) " +
-                "WHERE c.externalId IN {id} " +
+                "WHERE c.externalId IN $id " +
                 "RETURN c.id as id, c.externalId as externalId");
 
         JsonObject values = new JsonObject();
@@ -550,9 +550,9 @@ public class DefaultUtilsService implements UtilsService{
     @Override
     public Future<JsonArray> getClassGroupExternalIdsFromIds(List<String> classGroupIds, Promise<JsonArray> promise){
         StringBuilder query = new StringBuilder();
-        query.append("MATCH (g: Group) WHERE g.id IN {ids} RETURN g.externalId AS externalId " +
+        query.append("MATCH (g: Group) WHERE g.id IN $ids RETURN g.externalId AS externalId " +
                 "UNION " +
-                "MATCH (c: Class) WHERE c.id IN {ids} RETURN c.externalId AS externalId");
+                "MATCH (c: Class) WHERE c.id IN $ids RETURN c.externalId AS externalId");
 
         JsonObject values = new JsonObject();
         values.put("ids", new JsonArray(classGroupIds));
@@ -575,7 +575,7 @@ public class DefaultUtilsService implements UtilsService{
     public Future<JsonArray> getManualGroupNameById(List<String> groupIds, Promise<JsonArray> promise){
         StringBuilder query = new StringBuilder();
         query.append("MATCH (g:ManualGroup) " +
-                "WHERE g.id IN {ids} " +
+                "WHERE g.id IN $ids " +
                 "RETURN g.name as name");
 
         JsonObject values = new JsonObject();
@@ -597,7 +597,7 @@ public class DefaultUtilsService implements UtilsService{
     @Override
     public void getStructure(String idStructure, Handler<Either<String, JsonObject>> handler){
         StringBuilder query = new StringBuilder();
-        query.append("MATCH (s:Structure {id: {idStructure}}) return s ");
+        query.append("MATCH (s:Structure {id: $idStructure}) return s ");
         JsonObject params = new JsonObject().put("idStructure", idStructure);
         try{
             neo4j.execute(query.toString(), params, Neo4jResult.validUniqueResultHandler(handler));

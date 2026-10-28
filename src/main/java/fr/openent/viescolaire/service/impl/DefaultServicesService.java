@@ -164,7 +164,7 @@ public class DefaultServicesService extends SqlCrudService implements ServicesSe
     }
 
     public void getClassesFromStructureForServices(String structureId, Handler<Either<String, JsonArray>> result) {
-        String query = "MATCH (s:Structure{id:{structureId}})<-[:SUBJECT]-(sub:Subject)<-[r:TEACHES]-(u:User) " +
+        String query = "MATCH (s:Structure{id:$structureId})<-[:SUBJECT]-(sub:Subject)<-[r:TEACHES]-(u:User) " +
                 "RETURN u.id as idEnseignant, s.id as idEtablissement, sub.id as id, sub.code as externalId, sub.label as name, r.classes + r.groups as libelleClasses";
         JsonObject params = new JsonObject().put("structureId", structureId);
 
@@ -172,8 +172,8 @@ public class DefaultServicesService extends SqlCrudService implements ServicesSe
     }
 
     public void getSubjectANdTeachersForServices(String structureId, Handler<Either<String, JsonArray>> result) {
-        String query = "MATCH (s:Structure{id:{structureId}})--(c) " +
-                " WHERE (c:Class OR c:FunctionalGroup OR c:ManualGroup) and EXISTS(c.externalId) " +
+        String query = "MATCH (s:Structure{id:$structureId})--(c) " +
+                " WHERE (c:Class OR c:FunctionalGroup OR c:ManualGroup) and c.externalId IS NOT NULL " +
                 " RETURN c.id as id,c.externalId  as externalId";
         JsonObject params = new JsonObject().put("structureId", structureId);
 

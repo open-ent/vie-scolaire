@@ -73,7 +73,7 @@ public class MementoServiceTest {
 
     @Test
     public void retrieveStudentClasses_should_use_proper_query(TestContext ctx) throws Exception {
-        String PROPER_QUERY = "MATCH (u:User {id:{id}})-[:IN]->(:ProfileGroup)-[:DEPENDS]->(g:Class)" +
+        String PROPER_QUERY = "MATCH (u:User {id:$id})-[:IN]->(:ProfileGroup)-[:DEPENDS]->(g:Class)" +
                 "RETURN collect(g.name) AS classes, collect(g.id) as id";
 
         String studentId = "studentId";
@@ -91,7 +91,7 @@ public class MementoServiceTest {
 
     @Test
     public void retrieveStudentAndItsFunctionalGroups_should_use_proper_query(TestContext ctx) throws Exception {
-        String PROPER_QUERY = "MATCH(u:User {id:{id}})" +
+        String PROPER_QUERY = "MATCH(u:User {id:$id})" +
                 "OPTIONAL MATCH (u)-[:IN]-(g:FunctionalGroup) " +
                 "RETURN u.id as id, u.lastName + ' ' + u.firstName AS name, u.birthDate as birth_date, " +
                 "u.accommodation as accommodation, u.transport as transport, collect(g.name) as groups";
@@ -110,11 +110,11 @@ public class MementoServiceTest {
 
     @Test
     public void getAllRelatives_should_use_proper_query(TestContext ctx) throws Exception {
-        String PROPER_QUERY = "MATCH(:User {id:{id}})-[:RELATED]->(u:User) " +
+        String PROPER_QUERY = "MATCH(:User {id:$id})-[:RELATED]->(u:User) " +
                 "RETURN u.id as id, u.lastName + ' ' + u.firstName AS name, u.title AS title, " +
                 "CASE WHEN u.mobilePhone is null THEN u.mobile ELSE u.mobilePhone[0] END AS mobile, " +
                 "u.homePhone AS phone, u.address + ' ' + u.zipCode + ' ' + u.city AS address, u.email as email, " +
-                "NOT(HAS(u.activationCode)) AS activated";
+                "u.activationCode IS NULL AS activated";
 
         String studentId = "studentId";
 
@@ -132,7 +132,7 @@ public class MementoServiceTest {
 
     @Test
     public void updateRelativePriorities_should_use_proper_query(TestContext ctx) {
-        String PROPER_QUERY = "MATCH(u:User {id:{id}}) SET u.primaryRelatives = {relativeIds} RETURN u.primaryRelatives AS primaryRelatives";
+        String PROPER_QUERY = "MATCH(u:User {id:$id}) SET u.primaryRelatives = $relativeIds RETURN u.primaryRelatives AS primaryRelatives";
         String studentId = "studentId";
         JsonArray relativeIds = new JsonArray().add("relativeId");
 

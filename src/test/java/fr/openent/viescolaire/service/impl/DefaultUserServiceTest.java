@@ -47,9 +47,9 @@ public class DefaultUserServiceTest {
     public void testSearchOneField(TestContext ctx) {
         Async async = ctx.async();
         List<String> fields = Arrays.asList("field1");
-        String expectedQuery = "MATCH (u:User)-[:IN]->(:ProfileGroup)-[:DEPENDS]->(c:Class)-[:BELONGS]->(s:Structure {id:{structureId}})," +
-                " (t:User {id: {userId}})-[:IN]->(:ProfileGroup)-[:DEPENDS]->(c) WHERE u.profiles = {profiles} AND" +
-                " (toLower(u.displayName) CONTAINS {query} ) RETURN distinct u.id as id, (u.lastName + ' ' + u.firstName) as displayName," +
+        String expectedQuery = "MATCH (u:User)-[:IN]->(:ProfileGroup)-[:DEPENDS]->(c:Class)-[:BELONGS]->(s:Structure {id:$structureId})," +
+                " (t:User {id: $userId})-[:IN]->(:ProfileGroup)-[:DEPENDS]->(c) WHERE u.profiles = $profiles AND" +
+                " (toLower(u.displayName) CONTAINS $query ) RETURN distinct u.id as id, (u.lastName + ' ' + u.firstName) as displayName," +
                 " u.lastName as lastName, u.firstName as firstName, u.classes as idClasse, collect(c.name) as classesNames ORDER BY displayName;";
         String expectedParams = "{\"structureId\":\"structureId\",\"userId\":\"userId\",\"query\":\"query\",\"profiles\":[\"profile\"]}";
 
@@ -69,9 +69,9 @@ public class DefaultUserServiceTest {
     public void testSearchTwoField(TestContext ctx) {
         Async async = ctx.async();
         List<String> fields = Arrays.asList("field1", "field2");
-        String expectedQuery = "MATCH (u:User)-[:IN]->(:ProfileGroup)-[:DEPENDS]->(c:Class)-[:BELONGS]->(s:Structure {id:{structureId}})," +
-                " (t:User {id: {userId}})-[:IN]->(:ProfileGroup)-[:DEPENDS]->(c) WHERE u.profiles = {profiles} AND " +
-                "(toLower(u.displayName) CONTAINS {query} OR toLower(u.displayName) CONTAINS {query} ) RETURN distinct u.id as id," +
+        String expectedQuery = "MATCH (u:User)-[:IN]->(:ProfileGroup)-[:DEPENDS]->(c:Class)-[:BELONGS]->(s:Structure {id:$structureId})," +
+                " (t:User {id: $userId})-[:IN]->(:ProfileGroup)-[:DEPENDS]->(c) WHERE u.profiles = $profiles AND " +
+                "(toLower(u.displayName) CONTAINS $query OR toLower(u.displayName) CONTAINS $query ) RETURN distinct u.id as id," +
                 " (u.lastName + ' ' + u.firstName) as displayName, u.lastName as lastName, u.firstName as firstName, u.classes as idClasse," +
                 " collect(c.name) as classesNames ORDER BY displayName;";
         String expectedParams = "{\"structureId\":\"structureId\",\"userId\":\"userId\",\"query\":\"query\",\"profiles\":[\"profile\"]}";
@@ -93,8 +93,8 @@ public class DefaultUserServiceTest {
         Async async = ctx.async();
         List<String> fields = Arrays.asList("field1", "field2");
         String expectedQuery = "MATCH (u:User)-[:IN]->(p:ProfileGroup)-[:DEPENDS*]->(s:Structure) ,(p)-[:DEPENDS]->(c:Class) WHERE s.id" +
-                " = {structureId} AND u.profiles = {profiles} AND (toLower(u.displayName) CONTAINS {query} OR toLower(u.displayName)" +
-                " CONTAINS {query} ) RETURN distinct u.id as id, (u.lastName + ' ' + u.firstName) as displayName, u.lastName as lastName," +
+                " = $structureId AND u.profiles = $profiles AND (toLower(u.displayName) CONTAINS $query OR toLower(u.displayName)" +
+                " CONTAINS $query ) RETURN distinct u.id as id, (u.lastName + ' ' + u.firstName) as displayName, u.lastName as lastName," +
                 " u.firstName as firstName, u.classes as idClasse ,collect(c.name) as classesNames ORDER BY displayName;";
         String expectedParams = "{\"structureId\":\"structureId\",\"userId\":null,\"query\":\"query\",\"profiles\":[\"profile\"]}";
 

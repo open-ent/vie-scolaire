@@ -59,7 +59,7 @@ public class DefaultGroupeService extends SqlCrudService implements GroupeServic
     public void listGroupesEnseignementsByUserId(final String userId, Handler<Either<String, JsonArray>> handler) {
         StringBuilder query = new StringBuilder();
         JsonObject values = new JsonObject();
-        query.append("MATCH (u:User {id :{userId}}),(g:Group)")
+        query.append("MATCH (u:User {id :$userId}),(g:Group)")
                 .append(" WHERE g.externalId IN users.groups return g ");
         values.put("userId", userId);
 
@@ -91,7 +91,7 @@ public class DefaultGroupeService extends SqlCrudService implements GroupeServic
 
                                                 StringBuilder queryGroup = new StringBuilder();
                                                 JsonObject valuesGroup = new JsonObject();
-                                                queryGroup.append("MATCH (g:Group {id :{idGroupe}})")
+                                                queryGroup.append("MATCH (g:Group {id :$idGroupe})")
                                                         .append(" WHERE g.externalId IN users.groups return g ");
                                                 valuesGroup.put(Field.IDGROUP, idGroupe);
 
@@ -121,12 +121,12 @@ public class DefaultGroupeService extends SqlCrudService implements GroupeServic
         JsonObject params = new JsonObject();
 
         query.append(" MATCH(s:Structure)<-[:DEPENDS]-(n:FunctionalGroup)<-[:IN]-(u:User{profiles:['Student']}) ")
-                .append(" WHERE n.id IN {idGroupe} WITH s, n, u ")
+                .append(" WHERE n.id IN $idGroupe WITH s, n, u ")
                 .append(" MATCH (c:Class)-[:BELONGS]->(s) WHERE c.externalId IN u.classes RETURN n.id as id_groupe, ")
                 .append(" COLLECT(DISTINCT c.id) AS id_classes ")
                 .append(" UNION ")
                 .append(" MATCH (s:Structure)<-[:DEPENDS]-(n:ManualGroup)<-[:IN]-(u:User{profiles:['Student']}) ")
-                .append(" WHERE n.id IN {idGroupe} WITH  s, n, u ")
+                .append(" WHERE n.id IN $idGroupe WITH  s, n, u ")
                 .append(" MATCH (c:Class)-[:BELONGS]->(s) WHERE c.externalId IN u.classes RETURN n.id as id_groupe, ")
                 .append(" COLLECT(DISTINCT c.id) AS id_classes ");
         params.put("idGroupe", new JsonArray(Arrays.asList(idGroupe)))
@@ -152,13 +152,13 @@ public class DefaultGroupeService extends SqlCrudService implements GroupeServic
                 .append(" BY lastName, firstName ");
 
         if (!StringUtils.isEmpty(profile)) {
-            PROFILFILTER = " users.profiles =[{profile}] ";
+            PROFILFILTER = " users.profiles =[$profile] ";
             values.put("profile", profile);
         }
 
         // Si l'id en entrée est celui d'un groupe d'enseignement ou un groupe manuel
         StringBuilder query = new StringBuilder();
-        query.append("MATCH (g:Group {id : {groupeEnseignementId}})<-[:IN]-(users)-[:IN]->(:ProfileGroup)-")
+        query.append("MATCH (g:Group {id : $groupeEnseignementId})<-[:IN]-(users)-[:IN]->(:ProfileGroup)-")
                 .append("[:DEPENDS]->(c:Class) WHERE ")
                 .append(PROFILFILTER)
                 .append(RETURNING.toString());
@@ -166,7 +166,7 @@ public class DefaultGroupeService extends SqlCrudService implements GroupeServic
         // Si l'id en entrée est celui d'une classe
         StringBuilder queryGetClass = new StringBuilder();
         queryGetClass.append("MATCH (users)-[:IN]->(:ProfileGroup)-")
-                .append("[:DEPENDS]->(c:Class {id : {groupeEnseignementId}})  WHERE ")
+                .append("[:DEPENDS]->(c:Class {id : $groupeEnseignementId})  WHERE ")
                 .append(PROFILFILTER)
                 .append(RETURNING.toString());
 
@@ -175,8 +175,8 @@ public class DefaultGroupeService extends SqlCrudService implements GroupeServic
         StringBuilder queryGetDeleteUsers = new StringBuilder();
         queryGetDeleteUsers.append("MATCH (:DeleteGroup)<-[:IN]-(users:User)-[:HAS_RELATIONSHIPS]->(b:Backup),")
                 .append(" (fgroup:Group) ")
-                .append(" WHERE HAS(users.deleteDate) ")
-                .append(" AND fgroup.id = {groupeEnseignementId} ")
+                .append(" WHERE users.deleteDate IS NOT NULL ")
+                .append(" AND fgroup.id = $groupeEnseignementId ")
                 .append(" AND (fgroup.externalId IN users.groups ) ")
                 .append(" AND " + PROFILFILTER)
                 .append(" OPTIONAL MATCH (c:Class) WHERE c.externalId IN users.classes ")
@@ -204,11 +204,11 @@ public class DefaultGroupeService extends SqlCrudService implements GroupeServic
         JsonObject values = new JsonObject();
         values.put("groupeId", idGroupe);
 
-        String query = "MATCH (c:`Class` {id: {groupeId} }) RETURN c.id as id,  c.name as name " +
+        String query = "MATCH (c:`Class` {id: $groupeId }) RETURN c.id as id,  c.name as name " +
                 "UNION " +
-                "MATCH (g:`FunctionalGroup` {id: {groupeId}}) return g.id as id, g.name as name " +
+                "MATCH (g:`FunctionalGroup` {id: $groupeId}) return g.id as id, g.name as name " +
                 "UNION " +
-                "MATCH (g:`ManualGroup` {id: {groupeId}}) return g.id as id, g.name as name ";
+                "MATCH (g:`ManualGroup` {id: $groupeId}) return g.id as id, g.name as name ";
         neo4j.execute(query, values, Neo4jResult.validResultHandler(handler));
     }
 
@@ -217,11 +217,11 @@ public class DefaultGroupeService extends SqlCrudService implements GroupeServic
         Promise<JsonArray> promise = Promise.promise();
         JsonObject values = new JsonObject().put(Field.IDSAUDIENCE, new JsonArray(idsAudience));
 
-        String query = "MATCH (c:`Class`) WHERE c.id IN {idsAudience} RETURN c.id as id,  c.name as name " +
+        String query = "MATCH (c:`Class`) WHERE c.id IN $idsAudience RETURN c.id as id,  c.name as name " +
                 "UNION " +
-                "MATCH (g:`FunctionalGroup`) WHERE g.id IN {idsAudience} return g.id as id, g.name as name " +
+                "MATCH (g:`FunctionalGroup`) WHERE g.id IN $idsAudience return g.id as id, g.name as name " +
                 "UNION " +
-                "MATCH (g:`ManualGroup`) WHERE g.id IN {idsAudience} return g.id as id, g.name as name ";
+                "MATCH (g:`ManualGroup`) WHERE g.id IN $idsAudience return g.id as id, g.name as name ";
         neo4j.execute(query, values, Neo4jResult.validResultHandler(FutureHelper.handlerEitherPromise(promise)));
 
         return promise.future();
@@ -234,18 +234,18 @@ public class DefaultGroupeService extends SqlCrudService implements GroupeServic
                 .put(Field.USERID, userId)
                 .put(Field.QUERY, query);
 
-        String neo4jquery = "MATCH (g)-[:BELONGS|:DEPENDS]->(s:Structure {id:{structureId}}) WHERE " +
+        String neo4jquery = "MATCH (g)-[:BELONGS|:DEPENDS]->(s:Structure {id:$structureId}) WHERE " +
                 getQueryFilter(fields) +
                 "AND (g:Class OR g:FunctionalGroup) " +
                 "RETURN g.id as id, g.name as name " +
                 "ORDER BY g.name";
 
-        String queryFromUserId = "MATCH (u:User {id:{userId}})-[:IN]->" +
-                "(:ProfileGroup)-[:DEPENDS]->(g: Class)-[:BELONGS]->(s:Structure {id:{structureId}}) WHERE " +
+        String queryFromUserId = "MATCH (u:User {id:$userId})-[:IN]->" +
+                "(:ProfileGroup)-[:DEPENDS]->(g: Class)-[:BELONGS]->(s:Structure {id:$structureId}) WHERE " +
                 getQueryFilter(fields) + "RETURN g.id as id, g.name as name ORDER BY g.name " +
                 "UNION " +
-                "MATCH (u:User {profiles:['Student']})--(:ProfileGroup)--(c:Class)--(:ProfileGroup)--(t:User {id:{userId}}) " +
-                "WITH u, c MATCH (u)--(g)-[:DEPENDS]->(s:Structure {id:{structureId}}) WHERE (g:FunctionalGroup) AND " +
+                "MATCH (u:User {profiles:['Student']})--(:ProfileGroup)--(c:Class)--(:ProfileGroup)--(t:User {id:$userId}) " +
+                "WITH u, c MATCH (u)--(g)-[:DEPENDS]->(s:Structure {id:$structureId}) WHERE (g:FunctionalGroup) AND " +
                 getQueryFilter(fields) + "RETURN DISTINCT g.id as id, g.name as name ORDER BY g.name";
 
 
@@ -287,7 +287,7 @@ public class DefaultGroupeService extends SqlCrudService implements GroupeServic
 
     private String getQueryFilter(List<String> fields) {
         final StringBuilder filter = new StringBuilder();
-        fields.forEach(field -> filter.append("OR toLower(g.").append(getClassFieldName(field)).append(") CONTAINS {query} "));
+        fields.forEach(field -> filter.append("OR toLower(g.").append(getClassFieldName(field)).append(") CONTAINS $query "));
 
         return filter.toString().replaceFirst("OR ", "");
     }
@@ -301,13 +301,13 @@ public class DefaultGroupeService extends SqlCrudService implements GroupeServic
     }
 
     private void getTypesOfGroup(JsonArray groupsIds, Handler<Either<String, JsonArray>> handler, int attempt) {
-        String neo4jQuery = "MATCH (c:FunctionalGroup) WHERE c.id IN {ids}" +
+        String neo4jQuery = "MATCH (c:FunctionalGroup) WHERE c.id IN $ids " +
                 "RETURN c.id as id,\"FunctionalGroup\" as type  " +
                 "UNION " +
-                "MATCH(c:Class)   WHERE c.id IN {ids}" +
+                "MATCH(c:Class)   WHERE c.id IN $ids " +
                 "RETURN c.id as id,\"Class\" as type  " +
                 "UNION " +
-                "Match(c:ManualGroup) WHERE c.id IN {ids}" +
+                "Match(c:ManualGroup) WHERE c.id IN $ids " +
                 "RETURN c.id as id,\"ManualGroup\" as type";
 
 
@@ -334,7 +334,7 @@ public class DefaultGroupeService extends SqlCrudService implements GroupeServic
         JsonObject values = new JsonObject();
         values.put(Field.GROUP_ID_CAMEL, groupId);
 
-        String query = "MATCH (g:`Group` {id: {groupeId}}) WITH COUNT(g) > 0 as node_exists RETURN node_exists";
+        String query = "MATCH (g:`Group` {id: $groupeId}) WITH COUNT(g) > 0 as node_exists RETURN node_exists";
         neo4j.execute(query, values, Neo4jResult.validResultHandler(res -> {
             if (res.isRight()) {
                 promise.complete(((JsonObject)res.right().getValue().getValue(0)).getBoolean(Field.NODE_EXISTS));
