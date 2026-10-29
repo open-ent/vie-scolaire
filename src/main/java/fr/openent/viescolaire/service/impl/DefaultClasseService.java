@@ -409,8 +409,10 @@ public class DefaultClasseService extends SqlCrudService implements ClasseServic
         StringBuilder query = new StringBuilder();
         JsonObject params = new JsonObject();
 
-        query.append("MATCH (u:User {profiles:['Student']})--(:ProfileGroup)--(c:Class)--(s:Structure) ")
-                .append("WHERE c.id IN $idClasses ")
+        // Ancrée sur les classes désignées, pas sur les 514 000 élèves : ArcadeDB exécute le
+        // motif dans l'ordre écrit (6,5 s contre 0,0 s à Neo4j, qui réordonnait de lui-même).
+        query.append("MATCH (c:Class)--(s:Structure) WHERE c.id IN $idClasses ")
+                .append("WITH c, s MATCH (c)--(:ProfileGroup)--(u:User) WHERE u.profiles = ['Student'] ")
                 .append("WITH u, c, s OPTIONAL MATCH (u)--(g)--(s) WHERE (g:FunctionalGroup OR g:ManualGroup) AND NOT g.autolinkUsersFromGroups IS NOT NULL ")
                 .append("RETURN c.id as id_classe, c.name as name_classe, COLLECT(DISTINCT g.id) AS id_groupes");
         params.put("idClasses", new JsonArray(Arrays.asList(idClasses)));
