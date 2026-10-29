@@ -500,11 +500,7 @@ public class DefaultCommonCoursService extends DBService implements CommonCoursS
     private void checkGroupFromClass(List<String> groupIds, List<String> groupExternalIds, List<String> group, String structureId,
                                      Handler<Either<String, JsonArray>> handler) {
         // Aucun filtre de classe/groupe (ex. consultation par enseignant seul, ou recherche de
-        // conflit de salle sans contexte classe) : le moteur Neo4j de cette plateforme échoue
-        // silencieusement (jamais de callback, ni succès ni erreur -> bloque indéfiniment tout
-        // getCoursesOccurences) sur "IN [] OR IN [] OR IN []" quand les 3 listes sont vides à la
-        // fois. Aucun résultat à chercher dans ce cas précis (rien à filtrer), donc court-circuit
-        // plutôt que d'envoyer une requête qu'on sait cassée.
+        // conflit de salle sans contexte classe) : rien à filtrer, donc rien à demander au graphe.
         if ((groupIds == null || groupIds.isEmpty())
                 && (groupExternalIds == null || groupExternalIds.isEmpty())
                 && (group == null || group.isEmpty())) {
@@ -515,10 +511,18 @@ public class DefaultCommonCoursService extends DBService implements CommonCoursS
         StringBuilder query = new StringBuilder();
         JsonObject params = new JsonObject();
 
-        query.append("MATCH (u:User {profiles:['Student']})--(:ProfileGroup)--(c:Class)--(s:Structure) ")
+        // La requête part de l'établissement, jamais de User. Écrite dans l'autre sens, elle
+        // balayait les 514 000 User sur un filtre `profiles` qu'aucun index ne couvre : 66 s sur
+        // ArcadeDB, dont le planificateur ne réordonne pas le motif (Neo4j, lui, attaquait par
+        // Structure de lui-même et répondait en 0,3 s). Le bus abandonnant au bout de 30 s, la
+        // réponse n'arrivait jamais et getCoursesOccurences restait muet — d'où des emplois du
+        // temps vides sans la moindre erreur. Ancrée sur Structure (536 nœuds), la requête rend
+        // les mêmes lignes en 0,0 s sur les deux moteurs.
+        query.append("MATCH (s:Structure)--(c:Class) ")
                 .append("WHERE s.id = $idStructure ")
                 .append("AND (c.name IN $labelClasses OR c.externalId IN $classesExternalIds ")
                 .append("OR c.id IN $classesIds) ")
+                .append("WITH c MATCH (c)--(:ProfileGroup)--(u:User) WHERE u.profiles = ['Student'] ")
                 .append("WITH u, c MATCH (u)--(g) WHERE g:FunctionalGroup OR g:ManualGroup ")
                 .append("RETURN  c.name as name_classe, COLLECT(DISTINCT g.name) AS name_groups");
         params.put("idStructure", structureId);
