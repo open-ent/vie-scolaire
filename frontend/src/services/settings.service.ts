@@ -71,3 +71,9 @@ export const teachingService = {
   create: (body: object) => http().post<unknown>("/viescolaire/service", body, JSON_HEADERS),
   remove: (path: string) => http().delete<unknown>(path),
 };
+
+export const multiTeachingService = {
+  create: (structureId: string, body: object) => http().post<unknown>(`/viescolaire/multiteaching/create?structureId=${structureId}`, body, JSON_HEADERS),
+  update: (structureId: string, body: object) => http().put<unknown>(`/viescolaire/multiteaching/update?structureId=${structureId}`, body, JSON_HEADERS),
+  remove: (structureId: string, ids: number[]) => http().put<unknown>(`/viescolaire/multiteaching/delete?structureId=${structureId}`, { ids }, JSON_HEADERS),
+};

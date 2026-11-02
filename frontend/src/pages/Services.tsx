@@ -2,8 +2,11 @@ import { Button, Modal } from "@open-ent/react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { MultiTeachingModal } from "../components/MultiTeachingModal";
 import { useStructure } from "../components/StructureContext";
-import { alreadyExists, createPayload, deletePath, enrich, filterServices, GROUP_TYPES, Group, Service, SortKey, sortServices, typeFilterQuery } from "../lib/services";
+import { isCurrent } from "../lib/multiteaching";
+import { multiTeachingService } from "../services/settings.service";
+import { alreadyExists, createPayload, deletePath, enrich, filterServices, GROUP_TYPES, Group, MultiTeaching, Service, SortKey, sortServices, typeFilterQuery } from "../lib/services";
 import { teachingService } from "../services/settings.service";
 
 const COLUMNS: Array<{ key: SortKey; i18n: string; fallback: string }> = [
@@ -27,6 +30,8 @@ export const Services = () => {
   const [deployed, setDeployed] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [toDelete, setToDelete] = useState<Service | null>(null);
+  // fenêtre des co-enseignants / remplaçants : service visé, mode et remplacement existant à modifier
+  const [mt, setMt] = useState<{ service: Service; isCo: boolean; existing?: MultiTeaching } | null>(null);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
 
   const id = structure.id;
@@ -166,18 +171,38 @@ export const Services = () => {
                     {s.teacherName}
                     {s.coTeachers.filter((c) => c.displayName).map((c) => (
                       <div key={c.second_teacher_id} className="text-muted" data-vsco-co-teacher>
-                        {c.displayName}
+                        {c.displayName}{" "}
+                        <button type="button" className="btn btn-link p-0" aria-label={`Retirer ${c.displayName}`} onClick={async () => {
+                          try {
+                            await multiTeachingService.remove(id, (c.idsAndIdsGroups ?? []).map((l) => l.id));
+                            setMessage({ ok: true, text: tr("evaluation.coteaching.delete", "Le co-enseignant a bien été retiré") });
+                          } catch {
+                            setMessage({ ok: false, text: tr("evaluation.coteaching.delete.error", "Une erreur est survenue lors de la suppression") });
+                          }
+                          await refresh();
+                        }} data-vsco-co-remove>
+                          ×
+                        </button>
                       </div>
                     ))}
                   </td>
                   <td>
                     {s.substituteTeachers.filter((c) => c.displayName).map((c) => (
-                      <div key={`${c.second_teacher_id}-${c.start_date}`} data-vsco-substitute>
-                        {c.displayName}
+                      <div key={`${c.second_teacher_id}-${c.start_date}`} data-vsco-substitute className={isCurrent(c) ? "" : "text-muted"}>
+                        <span title={`${c.start_date?.slice(0, 10)} → ${c.end_date?.slice(0, 10)}`}>{c.displayName}</span>{" "}
+                        <button type="button" className="btn btn-link p-0" aria-label={`Modifier le remplacement de ${c.displayName}`} onClick={() => setMt({ service: s, isCo: false, existing: c })} data-vsco-substitute-edit>
+                          ✎
+                        </button>
                       </div>
                     ))}
                   </td>
-                  <td>
+                  <td className="d-flex gap-8 flex-wrap">
+                    <button type="button" className="btn btn-sm btn-secondary" onClick={() => setMt({ service: s, isCo: false })} data-vsco-substitute-add>
+                      {tr("evaluations.remplacement.remplacant", "+ Remplaçant")}
+                    </button>
+                    <button type="button" className="btn btn-sm btn-secondary" onClick={() => setMt({ service: s, isCo: true })} data-vsco-coteacher-add>
+                      {tr("evaluation.service.coenseignants", "+ Co-enseignant")}
+                    </button>
                     {s.is_manual && (
                       <button type="button" className="btn btn-sm btn-outline-danger" onClick={() => setToDelete(s)} data-vsco-service-delete>
                         {tr("item.delete", "Supprimer")}
@@ -198,6 +223,20 @@ export const Services = () => {
         </tbody>
       </table>
       {!loading && shown.length === 0 && <p className="text-muted">{tr("evaluation.service.none", "Aucun service.")}</p>}
+
+      <MultiTeachingModal
+        service={mt?.service ?? null}
+        isCo={mt?.isCo ?? false}
+        existing={mt?.existing}
+        structureId={id}
+        teachers={teachers.data ?? []}
+        onClose={() => setMt(null)}
+        onDone={async (ok, text) => {
+          setMt(null);
+          setMessage({ ok, text });
+          await refresh();
+        }}
+      />
 
       <Modal id="vsco-service-create" isOpen={creating} onModalClose={() => setCreating(false)} size="lg" scrollable>
         <Modal.Header onModalClose={() => setCreating(false)}>{tr("evaluation.service.lightboxes.create", "Créer un service")}</Modal.Header>

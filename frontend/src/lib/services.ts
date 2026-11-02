@@ -60,6 +60,8 @@ export interface Service extends RawService {
   topicName: string;
   teacherName: string;
   groupName: string;
+  /** Classes et groupes du service (pour choisir celles d'un co-enseignement ou d'un remplacement). */
+  groups: Group[];
   coTeachers: MultiTeaching[];
   substituteTeachers: MultiTeaching[];
   subTopics: SubTopic[];
@@ -90,7 +92,8 @@ export const enrich = (raw: RawService[], matieres: Matiere[], teachers: Teacher
     const m = mat.get(s.id_matiere);
     const t = tea.get(s.id_enseignant);
     const ids = s.id_groups && s.id_groups.length > 0 ? s.id_groups : [s.id_groupe];
-    const names = [...new Set(ids.map((id) => grp.get(id)?.name).filter((n): n is string => !!n))].sort((a, b) => a.localeCompare(b));
+    const found = [...new Map(ids.map((id) => [id, grp.get(id)] as const).filter((e): e is [string, Group] => !!e[1])).values()].sort((a, b) => a.name.localeCompare(b.name));
+    const names = found.map((g) => g.name);
     if (!m || !t || names.length === 0) continue;
     const coTeachers = named(s.coTeachers);
     const substituteTeachers = named(s.substituteTeachers);
@@ -100,6 +103,7 @@ export const enrich = (raw: RawService[], matieres: Matiere[], teachers: Teacher
       topicName,
       teacherName: t.displayName,
       groupName: names.join(", "),
+      groups: found,
       coTeachers,
       substituteTeachers,
       subTopics: (m.sous_matieres ?? []).map((x) => sub.get(x.id_type_sousmatiere)).filter((x): x is SubTopic => !!x),
