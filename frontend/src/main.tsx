@@ -8,6 +8,7 @@ import i18n from "./i18n";
 import { hasWorkflow } from "./lib/access";
 import { defaultSchoolTab, SchoolTabId, SectionId, visibleSchoolTabs, visibleSections } from "./lib/tabs";
 import { CdtSettings } from "./pages/CdtSettings";
+import { CompetencesSettings } from "./pages/CompetencesSettings";
 import { EdtSettings } from "./pages/EdtSettings";
 import { Exclusions } from "./pages/Exclusions";
 import { Groupings } from "./pages/Groupings";
@@ -93,7 +94,7 @@ const Section = ({ sections, canInitEdt }: { sections: SectionId[]; canInitEdt: 
   if (!id) return <Navigate to="/ecole" replace />;
   return (
     <div data-vsco-section={id}>
-      {id === "edt" ? <EdtSettings canInit={canInitEdt} /> : id === "diary" ? <CdtSettings /> : id === "presences" ? <PresencesSettings /> : <Placeholder id={id} />}
+      {id === "edt" ? <EdtSettings canInit={canInitEdt} /> : id === "diary" ? <CdtSettings /> : id === "presences" ? <PresencesSettings /> : id === "competences" ? <CompetencesSettings /> : <Placeholder id={id} />}
     </div>
   );
 };
