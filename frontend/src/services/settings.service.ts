@@ -42,3 +42,22 @@ export const exclusionService = {
     }
   },
 };
+
+export const groupingService = {
+  list: (structureId: string) => http().get<import("../lib/groupings").Grouping[]>(`/viescolaire/grouping/structure/${structureId}/list`),
+  create: (structureId: string, name: string) => http().post<{ id: string }>(`/viescolaire/grouping/structure/${structureId}`, { name }, JSON_HEADERS),
+  rename: (id: string, name: string) => http().put<unknown>(`/viescolaire/grouping/${id}`, { name }, JSON_HEADERS),
+  remove: (id: string) => http().delete<unknown>(`/viescolaire/grouping/${id}`),
+  addClass: (id: string, classId: string) => http().post<unknown>(`/viescolaire/grouping/${id}/add`, { student_division_id: classId }, JSON_HEADERS),
+  /** DELETE avec corps JSON (le client de la plateforme n'en porte pas) : appel direct, avec le jeton CSRF. */
+  removeClass: async (id: string, classId: string) => {
+    const token = /XSRF-TOKEN=([^;]+)/.exec(document.cookie)?.[1];
+    const res = await fetch(`/viescolaire/grouping/${id}/delete`, {
+      method: "DELETE",
+      credentials: "include",
+      headers: { "Content-Type": "application/json", ...(token ? { "X-XSRF-TOKEN": decodeURIComponent(token) } : {}) },
+      body: JSON.stringify({ student_division_id: classId }),
+    });
+    if (!res.ok) throw new Error(String(res.status));
+  },
+};

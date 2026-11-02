@@ -7,6 +7,7 @@ import { Structure, StructureContext } from "./components/StructureContext";
 import i18n from "./i18n";
 import { defaultSchoolTab, SchoolTabId, SectionId, visibleSchoolTabs, visibleSections } from "./lib/tabs";
 import { Exclusions } from "./pages/Exclusions";
+import { Groupings } from "./pages/Groupings";
 import { Periods } from "./pages/Periods";
 import { Placeholder } from "./pages/Placeholder";
 import { SchoolYear } from "./pages/SchoolYear";
@@ -74,7 +75,7 @@ const School = ({ tabs }: { tabs: SchoolTabId[] }) => {
         attr="data-vsco-school-tab"
       />
       <div data-vsco-panel={current}>
-        {current === "annee" ? <SchoolYear /> : current === "creneaux" ? <TimeSlots /> : current === "periodes" ? <Periods /> : current === "exclusions" ? <Exclusions /> : <Placeholder id={current} />}
+        {current === "annee" ? <SchoolYear /> : current === "creneaux" ? <TimeSlots /> : current === "periodes" ? <Periods /> : current === "exclusions" ? <Exclusions /> : current === "regroupements" ? <Groupings /> : <Placeholder id={current} />}
       </div>
     </div>
   );
