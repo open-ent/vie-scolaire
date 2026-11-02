@@ -2,7 +2,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useStructure } from "../components/StructureContext";
-import { Classe, defaultTimeSlot, endTimes, formatTime, sortClasses, TimeSlot, unassociated } from "../lib/timeSlots";
+import { Classe, defaultTimeSlot, endOfHalfDay, endTimes, sortClasses, TimeSlot, unassociated } from "../lib/timeSlots";
 import { timeSlotService } from "../services/settings.service";
 
 /** Plages horaires : profil de l'établissement, fin de demi-journée, et profils associés à des classes. */
@@ -113,7 +113,7 @@ export const TimeSlots = () => {
             <select
               id="vsco-half-day"
               className="form-select"
-              value={formatTime(current.endOfHalfDay)}
+              value={endOfHalfDay(current)}
               onChange={(e) => run(() => timeSlotService.setEndOfHalfDay(current._id, structure.id, e.target.value), t("viescolaire.save.end.of.half.day", { defaultValue: "La fin de demi-journée a bien été enregistrée" }))}
               data-vsco-half-day
             >

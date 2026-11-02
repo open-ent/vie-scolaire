@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { defaultTimeSlot, endTimes, formatTime, unassociated } from "./timeSlots";
+import { defaultTimeSlot, endOfHalfDay, endTimes, formatTime, unassociated } from "./timeSlots";
 
 describe("plages horaires", () => {
   it("met une heure au format HH:mm", () => {
@@ -20,5 +20,13 @@ describe("plages horaires", () => {
   it("ne propose que les classes sans profil, triées par nom", () => {
     const classes = [{ id: "2", name: "6B" }, { id: "1", name: "6A" }, { id: "3", name: "5A" }];
     expect(unassociated(classes, new Set(["1"])).map((c) => c.name)).toEqual(["5A", "6B"]);
+  });
+});
+
+describe("fin de demi-journée", () => {
+  it("lit le champ du serveur (end_of_half_day) au format HH:mm", () => {
+    expect(endOfHalfDay({ _id: "a", name: "A", end_of_half_day: "12:00:00" })).toBe("12:00");
+    expect(endOfHalfDay({ _id: "a", name: "A" })).toBe("");
+    expect(endOfHalfDay(undefined)).toBe("");
   });
 });

@@ -10,7 +10,8 @@ export interface TimeSlot {
   _id: string;
   name: string;
   schoolId?: string;
-  endOfHalfDay?: string;
+  /** Fin de demi-journée, au format `HH:mm:ss` (le serveur écrit `end_of_half_day`, pas `endOfHalfDay`). */
+  end_of_half_day?: string;
   default?: boolean;
   slots?: Slot[];
 }
@@ -39,3 +40,6 @@ export const sortClasses = (classes: Classe[]): Classe[] => [...classes].sort((a
 /** Classes sans profil de plages horaires parmi `classes`, étant donné les classes déjà associées (tous profils). */
 export const unassociated = (classes: Classe[], associatedIds: Set<string>): Classe[] =>
   sortClasses(classes.filter((c) => !associatedIds.has(c.id)));
+
+/** Fin de demi-journée d'un profil, au format `HH:mm` (vide si elle n'est pas définie). */
+export const endOfHalfDay = (slot?: TimeSlot): string => formatTime(slot?.end_of_half_day);

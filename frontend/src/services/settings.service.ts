@@ -18,3 +18,10 @@ export const timeSlotService = {
   dissociate: (classId: string) => http().delete<unknown>(`/viescolaire/timeslot/audience/${classId}`),
   dissociateAll: (timeSlotId: string) => http().delete<unknown>(`/viescolaire/timeslot/${timeSlotId}`),
 };
+
+export const periodService = {
+  list: (structureId: string) => http().get<import("../lib/periods").Periode[]>(`/viescolaire/periodes?idEtablissement=${structureId}`),
+  types: () => http().get<import("../lib/periods").PeriodType[]>("/viescolaire/periodes/types"),
+  save: (body: object) => http().put<unknown>("/viescolaire/periodes", body, JSON_HEADERS),
+  publish: (periodId: number, publication: boolean) => http().put<unknown>(`/viescolaire/periode/${periodId}?publication=${publication}`),
+};
