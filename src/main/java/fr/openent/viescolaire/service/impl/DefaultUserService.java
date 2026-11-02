@@ -849,7 +849,11 @@ public class DefaultUserService extends SqlCrudService implements UserService {
             params.put(Field.STRUCTUREID, structureId);
         }
         String condition = "";
-        String functionMatch = "WITH u MATCH (s:Structure)<-[:DEPENDS]-(pg:ProfileGroup)-[:HAS_PROFILE]->(p:Profile), (u)-[:IN]->(pg) ";
+        // Avec un établissement, la structure `s` est celle déjà trouvée (`n`) : sans cet ancrage, ArcadeDB parcourt les
+        // groupes de TOUTES les structures pour chaque utilisateur (29 s pour 31 enseignants, 0,08 s ancré).
+        String functionMatch = (structureId != null && !structureId.trim().isEmpty())
+                ? "WITH u, n AS s MATCH (s)<-[:DEPENDS]-(pg:ProfileGroup)-[:HAS_PROFILE]->(p:Profile), (u)-[:IN]->(pg) "
+                : "WITH u MATCH (s:Structure)<-[:DEPENDS]-(pg:ProfileGroup)-[:HAS_PROFILE]->(p:Profile), (u)-[:IN]->(pg) ";
 
         String query =
                 "MATCH " + filter + "(u:User) " +
