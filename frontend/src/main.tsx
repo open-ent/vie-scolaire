@@ -13,6 +13,7 @@ import { Placeholder } from "./pages/Placeholder";
 import { SchoolYear } from "./pages/SchoolYear";
 import { Services } from "./pages/Services";
 import { TimeSlots } from "./pages/TimeSlots";
+import { Trombinoscope } from "./pages/Trombinoscope";
 import { Providers } from "./providers";
 import { contextOf, useMe } from "./services/queries";
 
@@ -76,7 +77,7 @@ const School = ({ tabs }: { tabs: SchoolTabId[] }) => {
         attr="data-vsco-school-tab"
       />
       <div data-vsco-panel={current}>
-        {current === "annee" ? <SchoolYear /> : current === "creneaux" ? <TimeSlots /> : current === "periodes" ? <Periods /> : current === "exclusions" ? <Exclusions /> : current === "regroupements" ? <Groupings /> : current === "services" ? <Services /> : <Placeholder id={current} />}
+        {current === "annee" ? <SchoolYear /> : current === "creneaux" ? <TimeSlots /> : current === "periodes" ? <Periods /> : current === "exclusions" ? <Exclusions /> : current === "regroupements" ? <Groupings /> : current === "services" ? <Services /> : current === "trombinoscope" ? <Trombinoscope /> : <Placeholder id={current} />}
       </div>
     </div>
   );

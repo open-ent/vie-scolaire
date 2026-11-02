@@ -93,3 +93,32 @@ export const serviceHomeworkService = {
   remove: (ids: number[]) => http().put<unknown>("/competences/devoirs/delete", { id_devoirs: ids }, JSON_HEADERS),
   move: (structureId: string, ids: number[], matiereId: string) => http().put<unknown>(`/competences/devoirs/service?idEtablissement=${structureId}`, { id_devoirs: ids, id_matiere: matiereId }, JSON_HEADERS),
 };
+
+const xsrf = (): Record<string, string> => {
+  const m = /XSRF-TOKEN=([^;]+)/.exec(document.cookie);
+  return m ? { "X-XSRF-TOKEN": decodeURIComponent(m[1]) } : {};
+};
+
+/** Envoi d'un fichier (multipart) : appel direct, le navigateur pose lui-même la frontière du corps. */
+const sendFile = async (method: "POST" | "PUT", url: string, file: File): Promise<Response> => {
+  const body = new FormData();
+  body.append("file", file);
+  return fetch(url, { method, credentials: "include", headers: xsrf(), body });
+};
+
+export const trombinoscopeService = {
+  settings: async (structureId: string) => (await http().get<{ active: boolean }>(`/viescolaire/structures/${structureId}/trombinoscope/setting`))?.active ?? false,
+  setSettings: (structureId: string, active: boolean) => http().post<unknown>(`/viescolaire/structures/${structureId}/trombinoscope/setting`, { active }, JSON_HEADERS),
+  reports: async (structureId: string) => (await http().get<{ all: import("../lib/trombinoscope").Report[] }>(`/viescolaire/structures/${structureId}/trombinoscope/reports?limit=-1&offset=0`))?.all ?? [],
+  failures: async (structureId: string) => (await http().get<{ all: import("../lib/trombinoscope").Failure[] }>(`/viescolaire/structures/${structureId}/trombinoscope/failures`))?.all ?? [],
+  clearFailures: (structureId: string) => http().delete<unknown>(`/viescolaire/structures/${structureId}/trombinoscope/failures`),
+  link: (structureId: string, studentId: string, pictureId: string) => http().post<unknown>(`/viescolaire/structures/${structureId}/students/${studentId}/trombinoscope`, { pictureId }, JSON_HEADERS),
+  importZip: (structureId: string, file: File) => sendFile("POST", `/viescolaire/structures/${structureId}/trombinoscope`, file),
+  replacePicture: (structureId: string, studentId: string, file: File) => sendFile("PUT", `/viescolaire/structures/${structureId}/students/${studentId}/trombinoscope`, file),
+  removePicture: (structureId: string, studentId: string) => http().delete<unknown>(`/viescolaire/structures/${structureId}/students/${studentId}/trombinoscope`),
+  students: async (structureId: string, query: string) => (await http().get<import("../lib/trombinoscope").Student[]>(`/viescolaire/structures/${structureId}/students${query}`)) ?? [],
+  searchStudents: (structureId: string, q: string) =>
+    http().get<import("../lib/trombinoscope").Found[]>(`/viescolaire/user/search?q=${encodeURIComponent(q.replace("\\s", "").toLowerCase())}&structureId=${structureId}&field=lastName&field=firstName&field=displayName&profile=Student`),
+  searchGroups: (structureId: string, q: string) =>
+    http().get<import("../lib/trombinoscope").Found[]>(`/viescolaire/group/search?q=${encodeURIComponent(q.replace("\\s", "").toLowerCase())}&structureId=${structureId}&field=name`),
+};
