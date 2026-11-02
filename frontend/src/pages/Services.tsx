@@ -3,9 +3,10 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { MultiTeachingModal } from "../components/MultiTeachingModal";
+import { SubTopicsModal } from "../components/SubTopicsModal";
 import { useStructure } from "../components/StructureContext";
 import { isCurrent } from "../lib/multiteaching";
-import { multiTeachingService } from "../services/settings.service";
+import { multiTeachingService, serviceHomeworkService } from "../services/settings.service";
 import { alreadyExists, createPayload, deletePath, enrich, filterServices, GROUP_TYPES, Group, MultiTeaching, Service, SortKey, sortServices, typeFilterQuery } from "../lib/services";
 import { teachingService } from "../services/settings.service";
 
@@ -31,6 +32,11 @@ export const Services = () => {
   const [creating, setCreating] = useState(false);
   const [toDelete, setToDelete] = useState<Service | null>(null);
   // fenêtre des co-enseignants / remplaçants : service visé, mode et remplacement existant à modifier
+  // sous-matières : matière d'où l'on part ; devoirs liés au service à supprimer : liste et choix (supprimer / déplacer)
+  const [subFor, setSubFor] = useState<string | null>(null);
+  const [homework, setHomework] = useState<{ service: Service; ids: number[] } | null>(null);
+  const [hwAction, setHwAction] = useState<"delete" | "move">("delete");
+  const [hwMatiere, setHwMatiere] = useState("");
   const [mt, setMt] = useState<{ service: Service; isCo: boolean; existing?: MultiTeaching } | null>(null);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
 
@@ -66,10 +72,7 @@ export const Services = () => {
     }
     await refresh();
   };
-  const remove = async () => {
-    const s = toDelete;
-    setToDelete(null);
-    if (!s) return;
+  const doDelete = async (s: Service) => {
     try {
       await teachingService.remove(deletePath(s));
       setMessage({ ok: true, text: tr("evaluation.service.delete", "Le service a bien été supprimé") });
@@ -77,6 +80,41 @@ export const Services = () => {
       setMessage({ ok: false, text: tr("evaluation.service.error.delete", "Une erreur est survenue lors de la suppression du service") });
     }
     await refresh();
+  };
+  // des devoirs saisis sur ce service : on propose de les supprimer ou de les déplacer avant de supprimer le service
+  const remove = async () => {
+    const s = toDelete;
+    setToDelete(null);
+    if (!s) return;
+    let devoirs: Array<{ id: number }> = [];
+    try {
+      devoirs = (await serviceHomeworkService.list(id, s)) ?? [];
+    } catch {
+      devoirs = [];
+    }
+    if (devoirs.length === 0) await doDelete(s);
+    else {
+      setHwAction("delete");
+      setHwMatiere("");
+      setHomework({ service: s, ids: devoirs.map((d) => d.id) });
+    }
+  };
+  const resolveHomework = async () => {
+    const h = homework;
+    if (!h) return;
+    try {
+      if (hwAction === "delete") await serviceHomeworkService.remove(h.ids);
+      else {
+        await serviceHomeworkService.move(id, h.ids, hwMatiere);
+        // les devoirs repartent sur la nouvelle matière : le service correspondant est créé pour le même enseignant et les mêmes classes
+        await teachingService.create(createPayload(id, h.service.id_enseignant, hwMatiere, h.service.groups.map((g) => g.id), true));
+      }
+      setHomework(null);
+      await doDelete(h.service);
+    } catch {
+      setHomework(null);
+      setMessage({ ok: false, text: tr("evaluations.service.devoir.update.error", "Une erreur est survenue lors de la mise à jour des devoirs") });
+    }
   };
 
   const addWord = () => {
@@ -203,6 +241,9 @@ export const Services = () => {
                     <button type="button" className="btn btn-sm btn-secondary" onClick={() => setMt({ service: s, isCo: true })} data-vsco-coteacher-add>
                       {tr("evaluation.service.coenseignants", "+ Co-enseignant")}
                     </button>
+                    <button type="button" className="btn btn-sm btn-secondary" onClick={() => setSubFor(s.id_matiere)} data-vsco-sub-open>
+                      {tr("viescolaire.create.subEnseignement", "Sous-matières")}
+                    </button>
                     {s.is_manual && (
                       <button type="button" className="btn btn-sm btn-outline-danger" onClick={() => setToDelete(s)} data-vsco-service-delete>
                         {tr("item.delete", "Supprimer")}
@@ -223,6 +264,44 @@ export const Services = () => {
         </tbody>
       </table>
       {!loading && shown.length === 0 && <p className="text-muted">{tr("evaluation.service.none", "Aucun service.")}</p>}
+
+      <SubTopicsModal
+        matiereId={subFor}
+        matieres={matieres.data ?? []}
+        subTopics={subTopics.data ?? []}
+        structureId={id}
+        onClose={() => setSubFor(null)}
+        onDone={async (ok, text) => {
+          setSubFor(null);
+          setMessage({ ok, text });
+          await Promise.all([qc.invalidateQueries({ queryKey: ["matieres", id] }), qc.invalidateQueries({ queryKey: ["subTopics", id] }), refresh()]);
+        }}
+      />
+
+      <Modal id="vsco-service-homework" isOpen={!!homework} onModalClose={() => setHomework(null)}>
+        <Modal.Header onModalClose={() => setHomework(null)}>{tr("evaluation.service.lightboxes.switchEval", "Des devoirs sont liés à ce service")}</Modal.Header>
+        <Modal.Body>
+          <p data-vsco-hw-count>{tr("evaluations.service.devoir.error", "Ce service comporte [nbDevoir] devoir(s).").replace("[nbDevoir]", String(homework?.ids.length ?? 0))}</p>
+          <label className="d-block mb-8">
+            <input type="radio" name="vsco-hw" checked={hwAction === "delete"} onChange={() => setHwAction("delete")} data-vsco-hw-delete /> {tr("evaluations.service.devoir.delete", "Supprimer les devoirs")}
+          </label>
+          <label className="d-block mb-8">
+            <input type="radio" name="vsco-hw" checked={hwAction === "move"} onChange={() => setHwAction("move")} data-vsco-hw-move /> {tr("evaluations.service.devoir.update", "Déplacer les devoirs vers une autre matière")}
+          </label>
+          {hwAction === "move" && (
+            <select className="form-select" style={{ maxWidth: 360 }} value={hwMatiere} onChange={(e) => setHwMatiere(e.target.value)} aria-label={tr("evaluation.service.columns.matiere", "Matière")} data-vsco-hw-matiere>
+              <option value="" disabled>{tr("evaluation.service.columns.matiere", "Matière")}</option>
+              {[...(matieres.data ?? [])].filter((m) => m.id !== homework?.service.id_matiere).sort((a, b) => a.name.localeCompare(b.name)).map((m) => (
+                <option key={m.id} value={m.id}>{m.name}</option>
+              ))}
+            </select>
+          )}
+        </Modal.Body>
+        <Modal.Footer>
+          <Button type="button" color="tertiary" variant="ghost" onClick={() => setHomework(null)}>{tr("viescolaire.utils.cancel", "Annuler")}</Button>
+          <Button type="button" color="primary" disabled={hwAction === "move" && !hwMatiere} onClick={resolveHomework} data-vsco-hw-save>{tr("viescolaire.utils.save", "Enregistrer")}</Button>
+        </Modal.Footer>
+      </Modal>
 
       <MultiTeachingModal
         service={mt?.service ?? null}

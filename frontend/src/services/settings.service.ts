@@ -77,3 +77,19 @@ export const multiTeachingService = {
   update: (structureId: string, body: object) => http().put<unknown>(`/viescolaire/multiteaching/update?structureId=${structureId}`, body, JSON_HEADERS),
   remove: (structureId: string, ids: number[]) => http().put<unknown>(`/viescolaire/multiteaching/delete?structureId=${structureId}`, { ids }, JSON_HEADERS),
 };
+
+export const subTopicService = {
+  create: (structureId: string, libelle: string) => http().post<{ id: number }>("/viescolaire/types/sousmatiere", { libelle, id_structure: structureId }, JSON_HEADERS),
+  update: (id: number, structureId: string, libelle: string) => http().put<unknown>(`/viescolaire/types/sousmatiere/${id}`, { id, libelle, id_structure: structureId }, JSON_HEADERS),
+  relations: (body: object) => http().post<unknown>("/viescolaire/types/sousmatieres/relations", body, JSON_HEADERS),
+};
+
+/** Devoirs (module Compétences) liés à un service : bloquent sa suppression tant qu'ils ne sont pas supprimés ou déplacés. */
+export const serviceHomeworkService = {
+  list: (structureId: string, s: { id_matiere: string; id_groups?: string[]; id_groupe: string; id_enseignant: string }) =>
+    http().get<Array<{ id: number }>>(
+      `/competences/devoirs/service?idEtablissement=${structureId}&id_matiere=${s.id_matiere}&id_groups=${(s.id_groups && s.id_groups.length > 0 ? s.id_groups : [s.id_groupe]).join(",")}&id_enseignant=${s.id_enseignant}`,
+    ),
+  remove: (ids: number[]) => http().put<unknown>("/competences/devoirs/delete", { id_devoirs: ids }, JSON_HEADERS),
+  move: (structureId: string, ids: number[], matiereId: string) => http().put<unknown>(`/competences/devoirs/service?idEtablissement=${structureId}`, { id_devoirs: ids, id_matiere: matiereId }, JSON_HEADERS),
+};
