@@ -8,6 +8,7 @@ import i18n from "./i18n";
 import { defaultSchoolTab, SchoolTabId, SectionId, visibleSchoolTabs, visibleSections } from "./lib/tabs";
 import { Placeholder } from "./pages/Placeholder";
 import { SchoolYear } from "./pages/SchoolYear";
+import { TimeSlots } from "./pages/TimeSlots";
 import { Providers } from "./providers";
 import { contextOf, useMe } from "./services/queries";
 
@@ -71,7 +72,7 @@ const School = ({ tabs }: { tabs: SchoolTabId[] }) => {
         attr="data-vsco-school-tab"
       />
       <div data-vsco-panel={current}>
-        {current === "annee" ? <SchoolYear /> : <Placeholder id={current} />}
+        {current === "annee" ? <SchoolYear /> : current === "creneaux" ? <TimeSlots /> : <Placeholder id={current} />}
       </div>
     </div>
   );
