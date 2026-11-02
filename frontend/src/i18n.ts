@@ -13,7 +13,7 @@ i18n
       parse: (data: string) => JSON.parse(data),
     },
     defaultNS: "common",
-    ns: ["common", "viescolaire"],
+    ns: ["common", "viescolaire", "edt"],
     // une clé absente de /viescolaire/i18n se cherche dans le commun
     fallbackNS: "common",
     fallbackLng: "fr",

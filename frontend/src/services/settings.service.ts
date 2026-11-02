@@ -25,3 +25,20 @@ export const periodService = {
   save: (body: object) => http().put<unknown>("/viescolaire/periodes", body, JSON_HEADERS),
   publish: (periodId: number, publication: boolean) => http().put<unknown>(`/viescolaire/periode/${periodId}?publication=${publication}`),
 };
+
+export const exclusionService = {
+  list: async (structureId: string) =>
+    (await http().get<import("../lib/exclusions").Exclusion[]>(`/viescolaire/settings/periodes/exclusions?structureId=${structureId}`)) ?? [],
+  create: (body: object) => http().post<unknown>("/viescolaire/settings/exclusion", body, JSON_HEADERS),
+  update: (id: number, body: object) => http().put<unknown>(`/viescolaire/settings/exclusion/${id}`, body, JSON_HEADERS),
+  remove: (id: number) => http().delete<unknown>(`/viescolaire/settings/exclusion/${id}`),
+  /** Nombre de cours déjà programmés sur la période (avertissement avant de la fermer). */
+  countCourses: async (structureId: string, start: string, end: string): Promise<number> => {
+    try {
+      const body = await http().get<unknown>(`/viescolaire/common/courses/${structureId}/${start}/${end}`);
+      return Array.isArray(body) ? body.length : 0;
+    } catch {
+      return 0;
+    }
+  },
+};
