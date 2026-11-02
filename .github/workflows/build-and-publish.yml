@@ -48,10 +48,26 @@ jobs:
           pnpm install --frozen-lockfile || pnpm install
           node node_modules/gulp/bin/gulp.js build
           pnpm run build:sass
+      # IHM React (par defaut) de la vue vsco_react.html (/viescolaire/public/react/viescolaire.js) : sous-projet Vite
+      # frontend/, distinct du Gulp. Paquets prives @open-ent -> auth via OPENENT_PACKAGES_TOKEN (frontend/.npmrc).
+      # Sans cette etape, le fat-mod ne contient pas le bundle et ?ui=react (defaut) est casse (404).
+      - name: Build frontend React (sous-projet Vite frontend/)
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.OPENENT_PACKAGES_TOKEN }}
+        run: |
+          cd frontend
+          pnpm install --no-frozen-lockfile
+          pnpm exec vitest run
+          NODE_ENV=production pnpm exec vite build
+          mkdir -p ../src/main/resources/public/react
+          cp dist/viescolaire.js ../src/main/resources/public/react/
+          [ -d dist/assets ] && cp -r dist/assets ../src/main/resources/public/react/ || true
       - name: Verifier le bundle Angular
         run: |
           test -f src/main/resources/public/dist/vsco_personnels.js       || { echo "::error::bundle Angular manquant"; exit 1; }
           test -f src/main/resources/view/viescolaire/vsco_personnel.html || { echo "::error::vue Angular manquante"; exit 1; }
+          test -f src/main/resources/view/viescolaire/vsco_react.html     || { echo "::error::vue React manquante"; exit 1; }
+          test -f src/main/resources/public/react/viescolaire.js          || { echo "::error::bundle React manquant"; exit 1; }
       - name: Configure Maven pour GitHub Packages
         run: |
           mkdir -p ~/.m2
