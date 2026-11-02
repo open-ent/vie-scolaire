@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <title>{{#i18n}}viescolaire.viescolaire.title{{/i18n}}</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link id="favicon" rel="icon" type="image/x-icon" href="/assets/themes/edifice-bootstrap/img/illustrations/favicon.ico" />
+    <link rel="stylesheet" href="/assets/themes/openent-bootstrap/index.css" />
+  </head>
+  <body>
+    <div id="root"></div>
+    <div id="portal"></div>
+    <script>
+      // services activés pour l'établissement (même contrat que la vue AngularJS)
+      window.vscoServices = {
+        competences: {{ENABLE_COMPETENCES}},
+        presences: {{ENABLE_PRESENCES}},
+        diary: {{ENABLE_DIARY}},
+        edt: {{ENABLE_EDT}},
+        massmailing: {{ENABLE_MASSMAILING}},
+        incidents: {{ENABLE_INCIDENTS}}
+      };
+    </script>
+    <script src="/viescolaire/public/react/viescolaire.js?v=@@VERSION"></script>
+    <!-- bascule permanente vers l'ancienne interface (bouton flottant) -->
+    <script src="/viescolaire/public/ui-fab.js?v=@@VERSION"></script>
+  </body>
+</html>
