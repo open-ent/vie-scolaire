@@ -12,6 +12,7 @@ import { EdtSettings } from "./pages/EdtSettings";
 import { Exclusions } from "./pages/Exclusions";
 import { Groupings } from "./pages/Groupings";
 import { Periods } from "./pages/Periods";
+import { PresencesSettings } from "./pages/PresencesSettings";
 import { Placeholder } from "./pages/Placeholder";
 import { SchoolYear } from "./pages/SchoolYear";
 import { Services } from "./pages/Services";
@@ -92,7 +93,7 @@ const Section = ({ sections, canInitEdt }: { sections: SectionId[]; canInitEdt: 
   if (!id) return <Navigate to="/ecole" replace />;
   return (
     <div data-vsco-section={id}>
-      {id === "edt" ? <EdtSettings canInit={canInitEdt} /> : id === "diary" ? <CdtSettings /> : <Placeholder id={id} />}
+      {id === "edt" ? <EdtSettings canInit={canInitEdt} /> : id === "diary" ? <CdtSettings /> : id === "presences" ? <PresencesSettings /> : <Placeholder id={id} />}
     </div>
   );
 };
