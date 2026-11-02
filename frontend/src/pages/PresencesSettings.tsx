@@ -1,3 +1,4 @@
+import { MassmailingTemplates } from "../components/MassmailingTemplates";
 import { Button, Modal } from "@open-ent/react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ReactNode, useEffect, useMemo, useRef, useState } from "react";
@@ -927,9 +928,7 @@ const PresencesContent = ({ notify }: { notify: Notify }) => {
       <CatalogSection id="punishmentType" notify={notify} />
 
       <SectionCard anchor="massmailing" title={tr("presences.publipostage", "Publipostage")}>
-        <p className="text-muted m-0" data-vsco-presences-massmailing-pending>
-          {tr("presences.massmailing.soon", "Les modèles de publipostage (mail, PDF, SMS) se paramètrent pour l'instant depuis l'ancienne interface.")}
-        </p>
+        <MassmailingTemplates />
       </SectionCard>
 
       <StatisticsSection notify={notify} />

@@ -45,3 +45,12 @@ export const catalogService = {
   punishmentCategories: async (): Promise<Array<{ id: number; label: string; url_img: string }>> =>
     (await http().get<Array<{ id: number; label: string; url_img: string }>>("/incidents/punishments/category")) ?? [],
 };
+
+/** Modèles de publipostage (module massmailing). */
+export const massmailingService = {
+  list: async (type: import("../lib/massmailing").TemplateType, structureId: string) =>
+    (await http().get<import("../lib/massmailing").Template[]>(`/massmailing/settings/templates/${type}?structure=${structureId}&category=ALL`)) ?? [],
+  create: (body: object) => http().post<import("../lib/massmailing").Template>("/massmailing/settings/templates", body, JSON_HEADERS),
+  update: (id: number, body: object) => http().put<unknown>(`/massmailing/settings/templates/${id}`, body, JSON_HEADERS),
+  remove: (id: number) => http().delete<unknown>(`/massmailing/settings/templates/${id}`),
+};
