@@ -5,7 +5,10 @@ import { I18nextProvider, useTranslation } from "react-i18next";
 import { HashRouter, Navigate, NavLink, Route, Routes, useLocation, useParams } from "react-router-dom";
 import { Structure, StructureContext } from "./components/StructureContext";
 import i18n from "./i18n";
+import { hasWorkflow } from "./lib/access";
 import { defaultSchoolTab, SchoolTabId, SectionId, visibleSchoolTabs, visibleSections } from "./lib/tabs";
+import { CdtSettings } from "./pages/CdtSettings";
+import { EdtSettings } from "./pages/EdtSettings";
 import { Exclusions } from "./pages/Exclusions";
 import { Groupings } from "./pages/Groupings";
 import { Periods } from "./pages/Periods";
@@ -83,13 +86,13 @@ const School = ({ tabs }: { tabs: SchoolTabId[] }) => {
   );
 };
 
-const Section = ({ sections }: { sections: SectionId[] }) => {
+const Section = ({ sections, canInitEdt }: { sections: SectionId[]; canInitEdt: boolean }) => {
   const { section } = useParams();
   const id = sections.find((s) => s === section);
   if (!id) return <Navigate to="/ecole" replace />;
   return (
     <div data-vsco-section={id}>
-      <Placeholder id={id} />
+      {id === "edt" ? <EdtSettings canInit={canInitEdt} /> : id === "diary" ? <CdtSettings /> : <Placeholder id={id} />}
     </div>
   );
 };
@@ -145,7 +148,7 @@ const App = () => {
             <Routes>
               <Route path="/" element={<Navigate to="/ecole" replace />} />
               <Route path="/ecole/:tab?" element={<School tabs={schoolTabs} />} />
-              <Route path="/:section" element={<Section sections={sections} />} />
+              <Route path="/:section" element={<Section sections={sections} canInitEdt={hasWorkflow(me.data?.actions, "viesco.setting.initalisation.data") || hasWorkflow(me.data?.actions, "fr.cgi.edt.controllers.InitController|initPeriod")} />} />
             </Routes>
           </HashRouter>
         </StructureContext.Provider>
