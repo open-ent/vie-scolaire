@@ -61,3 +61,13 @@ export const groupingService = {
     if (!res.ok) throw new Error(String(res.status));
   },
 };
+
+export const teachingService = {
+  list: (structureId: string, filter: string) => http().get<import("../lib/services").RawService[]>(`/viescolaire/services?idEtablissement=${structureId}&${filter}`),
+  groups: (structureId: string) => http().get<import("../lib/services").Group[]>(`/viescolaire/classes?idEtablissement=${structureId}&forAdmin=true`),
+  matieres: (structureId: string) => http().get<import("../lib/services").Matiere[]>(`/viescolaire/matieres?idEtablissement=${structureId}`),
+  teachers: (structureId: string) => http().get<import("../lib/services").Teacher[]>(`/viescolaire/teachers?idEtablissement=${structureId}`),
+  subTopics: (structureId: string) => http().get<import("../lib/services").SubTopic[]>(`/viescolaire/types/sousmatieres?idStructure=${structureId}`),
+  create: (body: object) => http().post<unknown>("/viescolaire/service", body, JSON_HEADERS),
+  remove: (path: string) => http().delete<unknown>(path),
+};
