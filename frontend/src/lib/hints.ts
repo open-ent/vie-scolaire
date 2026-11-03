@@ -5,6 +5,13 @@
 export interface Hint {
   text: string;
   example?: string;
+  /** Étapes à suivre, affichées en liste sous le texte (ex. comment créer une grille). */
+  steps?: string[];
+  /** Lien utile vers l'écran où se fait l'action. */
+  link?: { href: string; label: string };
+  /** Droit nécessaire pour agir (nom d'affichage de l'action) : sans lui, ni étapes ni lien, seulement `otherwise`. */
+  needs?: string;
+  otherwise?: string;
 }
 
 export const HINTS: Record<string, Hint> = {
@@ -41,6 +48,14 @@ export const HINTS: Record<string, Hint> = {
   "school.creneaux": {
     text: "La grille horaire de l'établissement (créneaux d'une heure, récréations, pause du midi). La fin de demi-journée sépare le matin de l'après-midi : elle sert à compter les absences en demi-journées. Une grille différente peut être associée à certaines classes qui n'ont pas les mêmes horaires.",
     example: "Matin jusqu'à 12 h 00 ; la 6e SEGPA suit une grille particulière.",
+    steps: [
+      "Pour créer une grille particulière, ouvrir la page « Profils de créneaux horaires » de l'administration de la vie scolaire, puis cliquer sur « Créer » : la fenêtre « Nouveau profil de créneau » demande le nom du profil, puis ses créneaux (libellé, heure de début, heure de fin).",
+      "Autre possibilité : dans l'ancienne administration, rubrique « Gestion des établissements » puis « Calendrier », ajouter une grille puis ses créneaux (avec modification et suppression).",
+      "Revenir ici : le choix de la grille de l'établissement propose la nouvelle grille ; pour qu'une classe la suive, cliquer sur « Ajouter une association », choisir la grille puis les classes.",
+    ],
+    link: { href: "/dashboard/viescolaire-admin/creneaux", label: "Ouvrir la page « Profils de créneaux horaires »" },
+    needs: "time.slot.manage",
+    otherwise: "Pour créer une grille particulière, il faut le droit de gérer les plages horaires : demandez-le à l'administrateur de la vie scolaire de l'établissement.",
   },
   "school.services": {
     text: "Qui enseigne quoi, à quelle classe. Un service associe une matière, une classe (ou un groupe) et un enseignant ; les appels, les notes et l'emploi du temps s'en servent. Un co-enseignant partage le service avec le titulaire. Un remplaçant prend la place du titulaire pour une durée donnée, avec les mêmes droits. Une sous-matière détaille une matière (latin et grec pour Lettres classiques).",

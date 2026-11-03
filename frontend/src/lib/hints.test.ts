@@ -14,6 +14,15 @@ describe("explications des écrans", () => {
   it("chaque rubrique du cahier de textes est expliquée", () => {
     for (const s of CDT_SECTIONS) expect(hintOf(`cdt.${s.id}`), s.id).toBeDefined();
   });
+  it("la rubrique des plages horaires dit comment créer une grille, avec un lien vers l'écran de création", () => {
+    const h = hintOf("school.creneaux");
+    expect(h?.steps?.join(" ")).toMatch(/Profils de créneaux horaires/);
+    expect(h?.steps?.join(" ")).toMatch(/Calendrier/);
+    expect(h?.link?.href).toBe("/dashboard/viescolaire-admin/creneaux");
+    // lien et étapes réservés à qui gère les plages horaires ; les autres lisent à qui s'adresser
+    expect(h?.needs).toBe("time.slot.manage");
+    expect(h?.otherwise).toMatch(/administrateur/);
+  });
   it("les textes sont des phrases complètes, sans balise", () => {
     for (const [id, h] of Object.entries(HINTS)) {
       expect(h.text.length, id).toBeGreaterThan(30);
