@@ -1,3 +1,4 @@
+import { HintText } from "../components/HintText";
 import { Button, Modal } from "@open-ent/react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
@@ -342,6 +343,7 @@ export const CdtSettings = () => {
         </ul>
       </nav>
       <div className="flex-grow-1" style={{ minWidth: 0 }}>
+        <HintText id={`cdt.${current}`} />
         {current === "init" && <InitData />}
         {current === "homework" && <TypesSection kind="homework" />}
         {current === "session" && <TypesSection kind="session" />}

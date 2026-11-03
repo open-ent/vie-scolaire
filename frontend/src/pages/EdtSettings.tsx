@@ -1,3 +1,4 @@
+import { HintText } from "../components/HintText";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { EdtImport } from "./EdtImport";
@@ -27,6 +28,7 @@ export const EdtSettings = ({ canInit }: { canInit: boolean }) => {
           </li>
         ))}
       </ul>
+      <HintText id={`edt.${shown}`} />
       <div data-vsco-edt-panel={shown}>
         {shown === "init" && <EdtInit />}
         {shown === "import" && <EdtImport />}

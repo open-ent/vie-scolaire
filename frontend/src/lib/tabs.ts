@@ -9,6 +9,7 @@ export interface Services {
 }
 
 export type SectionId = "ecole" | "competences" | "presences" | "diary" | "edt";
+export const SCHOOL_TAB_IDS = ["annee", "periodes", "exclusions", "creneaux", "services", "regroupements", "trombinoscope"] as const;
 export type SchoolTabId = "annee" | "periodes" | "exclusions" | "creneaux" | "services" | "regroupements" | "trombinoscope";
 
 export interface Context {

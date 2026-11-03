@@ -1,0 +1,24 @@
+import { describe, expect, it } from "vitest";
+import { CDT_SECTIONS } from "./cdt";
+import { COMP_SECTIONS } from "./competencesAccess";
+import { HINTS, hintOf } from "./hints";
+import { SCHOOL_TAB_IDS } from "./tabs";
+
+describe("explications des écrans", () => {
+  it("chaque sous-onglet de l'établissement est expliqué", () => {
+    for (const id of SCHOOL_TAB_IDS) expect(hintOf(`school.${id}`), id).toBeDefined();
+  });
+  it("chaque rubrique des compétences est expliquée", () => {
+    for (const s of COMP_SECTIONS) expect(hintOf(`comp.${s.id}`), s.id).toBeDefined();
+  });
+  it("chaque rubrique du cahier de textes est expliquée", () => {
+    for (const s of CDT_SECTIONS) expect(hintOf(`cdt.${s.id}`), s.id).toBeDefined();
+  });
+  it("les textes sont des phrases complètes, sans balise", () => {
+    for (const [id, h] of Object.entries(HINTS)) {
+      expect(h.text.length, id).toBeGreaterThan(30);
+      expect(h.text, id).not.toMatch(/[<>]/);
+      expect(/[.»)]$/.test(h.text), id).toBe(true);
+    }
+  });
+});

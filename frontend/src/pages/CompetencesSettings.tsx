@@ -1,3 +1,4 @@
+import { HintText } from "../components/HintText";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { AbsenceImport } from "../components/competences/AbsenceImport";
@@ -101,6 +102,7 @@ export const CompetencesSettings = () => {
                 {tr("viescolaire.get.fail", "Erreur lors de la récupération")}
               </p>
             )}
+            <HintText id={`comp.${current}`} />
             {current === "levels" && <Levels {...props} cycles={cycles} cycleId={cycleId} onSelectCycle={setCycleId} onReload={() => qc.invalidateQueries({ queryKey: levelsKey })} />}
             {current === "visibilityAverage" && (
               <article>

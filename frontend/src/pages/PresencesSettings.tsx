@@ -1,3 +1,4 @@
+import { HintText } from "../components/HintText";
 import { MassmailingTemplates } from "../components/MassmailingTemplates";
 import { Button, Modal } from "@open-ent/react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -67,6 +68,7 @@ const useTr = () => {
 const SectionCard = ({ anchor, title, children }: { anchor?: string; title: string; children: ReactNode }) => (
   <section className="card p-16 mb-16" aria-label={title} data-vsco-presences-section={anchor}>
     <h3 className="h5 mb-12">{title}</h3>
+    {anchor && <HintText id={`presences.${anchor}`} />}
     {children}
   </section>
 );

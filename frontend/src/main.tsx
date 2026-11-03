@@ -9,6 +9,7 @@ import { hasWorkflow } from "./lib/access";
 import { defaultSchoolTab, SchoolTabId, SectionId, visibleSchoolTabs, visibleSections } from "./lib/tabs";
 import { CdtSettings } from "./pages/CdtSettings";
 import { CompetencesSettings } from "./pages/CompetencesSettings";
+import { HintText } from "./components/HintText";
 import { EdtSettings } from "./pages/EdtSettings";
 import { Exclusions } from "./pages/Exclusions";
 import { Groupings } from "./pages/Groupings";
@@ -75,6 +76,7 @@ const School = ({ tabs }: { tabs: SchoolTabId[] }) => {
   const current = tab as SchoolTabId;
   return (
     <div data-vsco-section="ecole">
+      <HintText id="tab.ecole" />
       <Tabs
         items={tabs.map((id) => ({ id, text: t(SCHOOL_LABEL[id][0], { defaultValue: SCHOOL_LABEL[id][1] }) }))}
         base="/ecole/"
@@ -82,6 +84,7 @@ const School = ({ tabs }: { tabs: SchoolTabId[] }) => {
         attr="data-vsco-school-tab"
       />
       <div data-vsco-panel={current}>
+        <HintText id={`school.${current}`} />
         {current === "annee" ? <SchoolYear /> : current === "creneaux" ? <TimeSlots /> : current === "periodes" ? <Periods /> : current === "exclusions" ? <Exclusions /> : current === "regroupements" ? <Groupings /> : current === "services" ? <Services /> : current === "trombinoscope" ? <Trombinoscope /> : <Placeholder id={current} />}
       </div>
     </div>
@@ -94,6 +97,7 @@ const Section = ({ sections, canInitEdt }: { sections: SectionId[]; canInitEdt: 
   if (!id) return <Navigate to="/ecole" replace />;
   return (
     <div data-vsco-section={id}>
+      <HintText id={`tab.${id}`} />
       {id === "edt" ? <EdtSettings canInit={canInitEdt} /> : id === "diary" ? <CdtSettings /> : id === "presences" ? <PresencesSettings /> : id === "competences" ? <CompetencesSettings /> : <Placeholder id={id} />}
     </div>
   );
