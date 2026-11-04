@@ -23,7 +23,6 @@ workspace.xml
 /manifests
 *.bat
 tslint.json
-.gitignore
 /nbproject/private/
 /src/main/resources/public/font
 /src/main/resources/public/js/behaviours.js
@@ -35,8 +34,12 @@ package-lock.json
 pnpm-lock.yaml
 .pnpm-store
 css
-?
 .env
 target
 dependency-reduced-pom.xml
 edifice
+
+# Front React (Vite) : dépendances et sorties de build
+/frontend/node_modules
+/frontend/dist
+/src/main/resources/public/react
