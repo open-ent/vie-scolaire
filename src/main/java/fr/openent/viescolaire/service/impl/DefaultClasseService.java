@@ -117,12 +117,16 @@ public class DefaultClasseService extends SqlCrudService implements ClasseServic
         StringBuilder query = new StringBuilder();
         JsonObject values = new JsonObject();
 
-        query.append("MATCH (u:User)-[:IN]-(:ProfileGroup)--(f:Class) WHERE u.profiles=[\"Student\"] " +
-                " AND f.id IN $idClasse RETURN f.id as id_groupe, count(distinct u) as nb " +
-                " UNION ALL MATCH (u:User)--(f:FunctionalGroup) WHERE u.profiles=[\"Student\"] " +
-                " AND f.id IN $idGroupe RETURN f.id as id_groupe, count(distinct u) as nb " +
-                " UNION ALL MATCH (u:User)--(f:ManualGroup) WHERE u.profiles=[\"Student\"] " +
-                " AND f.id IN $idGroupe RETURN f.id as id_groupe, count(distinct u) as nb ");
+        // Ancrée sur le groupe : partir de (u:User) parcourt tous les usagers sur ArcadeDB
+        query.append("MATCH (f:Class) WHERE f.id IN $idClasse " +
+                " MATCH (f)--(:ProfileGroup)-[:IN]-(u:User) WHERE u.profiles=[\"Student\"] " +
+                " RETURN f.id as id_groupe, count(distinct u) as nb " +
+                " UNION ALL MATCH (f:FunctionalGroup) WHERE f.id IN $idGroupe " +
+                " MATCH (f)--(u:User) WHERE u.profiles=[\"Student\"] " +
+                " RETURN f.id as id_groupe, count(distinct u) as nb " +
+                " UNION ALL MATCH (f:ManualGroup) WHERE f.id IN $idGroupe " +
+                " MATCH (f)--(u:User) WHERE u.profiles=[\"Student\"] " +
+                " RETURN f.id as id_groupe, count(distinct u) as nb ");
 
         values.put(mParameterIdClasse, idGroupes);
         values.put("idGroupe", idGroupes);
