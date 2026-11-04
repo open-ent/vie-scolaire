@@ -43,7 +43,7 @@
     "bower": "^1.8.4",
     "colors": "^1.2.5",
     "glob": "^7.1.1",
-    "gulp": "^3.9.1",
+    "gulp": "^5.0.1",
     "gulp-bower": "0.0.13",
     "gulp-clean": "^0.3.2",
     "gulp-modify": "^0.1.1",
@@ -54,13 +54,11 @@
     "gulp-watch": "^4.3.5",
     "jest": "^24.7.1",
     "jest-environment-node": "^23.0.0",
-    "merge2": "^1.2.2",
     "source-map-loader": "^0.1.5",
     "ts-jest": "^22.4.2",
     "typescript": "^2.8.3",
     "webpack": "^1.13.1",
     "webpack-stream": "3.2.0",
-    "merge-stream": "2.0.0",
     "sass": "^1.49.9",
     "entcore-css-lib": "npm:ode-csslib@develop"
   }

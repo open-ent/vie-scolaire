@@ -1,6 +1,9 @@
 #!/bin/bash
 
 MVN_OPTS="-Duser.home=/var/maven -T 4"
+# L'image node:26 (docker-compose) n'embarque ni pnpm ni corepack (retirés à partir de Node 25) :
+# pnpm est lancé par npx.
+PNPM="npx --yes pnpm@10"
 
 if [ ! -e node_modules ]
 then
@@ -27,10 +30,10 @@ clean () {
 buildNode () {
   case `uname -s` in
     MINGW*)
-      docker compose run --rm -u "$USER_UID:$GROUP_GID" node sh -c "pnpm install && node_modules/gulp/bin/gulp.js build  && pnpm run build:sass"
+      docker compose run --rm -u "$USER_UID:$GROUP_GID" node sh -c "$PNPM install && node_modules/gulp/bin/gulp.js build  && $PNPM run build:sass"
       ;;
     *)
-      docker compose run --rm -u "$USER_UID:$GROUP_GID" node sh -c "pnpm install && node_modules/gulp/bin/gulp.js build  && pnpm run build:sass"
+      docker compose run --rm -u "$USER_UID:$GROUP_GID" node sh -c "$PNPM install && node_modules/gulp/bin/gulp.js build  && $PNPM run build:sass"
   esac
 }
 
@@ -39,11 +42,11 @@ install() {
 }
 
 buildGulp() {
-    docker compose run --rm -u "$USER_UID:$GROUP_GID" node sh -c "pnpm install && node_modules/gulp/bin/gulp.js build"
+    docker compose run --rm -u "$USER_UID:$GROUP_GID" node sh -c "$PNPM install && node_modules/gulp/bin/gulp.js build"
 }
 
 buildCss() {
-  docker compose run --rm -u "$USER_UID:$GROUP_GID" node sh -c "pnpm run build:sass"
+  docker compose run --rm -u "$USER_UID:$GROUP_GID" node sh -c "$PNPM run build:sass"
 }
 
 publish() {
@@ -67,10 +70,10 @@ testNode () {
   rm -rf */build
   case `uname -s` in
     MINGW*)
-      docker compose run --rm -u "$USER_UID:$GROUP_GID" node sh -c "pnpm install && node_modules/gulp/bin/gulp.js drop-cache &&  npm test"
+      docker compose run --rm -u "$USER_UID:$GROUP_GID" node sh -c "$PNPM install && node_modules/gulp/bin/gulp.js drop-cache &&  npm test"
       ;;
     *)
-      docker compose run --rm -u "$USER_UID:$GROUP_GID" node sh -c "pnpm install && node_modules/gulp/bin/gulp.js drop-cache && npm test"
+      docker compose run --rm -u "$USER_UID:$GROUP_GID" node sh -c "$PNPM install && node_modules/gulp/bin/gulp.js drop-cache && npm test"
   esac
 }
 
@@ -79,10 +82,10 @@ testNodeDev () {
   rm -rf */build
   case `uname -s` in
     MINGW*)
-      docker compose run --rm -u "$USER_UID:$GROUP_GID" node sh -c "pnpm install && node_modules/gulp/bin/gulp.js drop-cache &&  npm run test:dev"
+      docker compose run --rm -u "$USER_UID:$GROUP_GID" node sh -c "$PNPM install && node_modules/gulp/bin/gulp.js drop-cache &&  npm run test:dev"
       ;;
     *)
-      docker compose run --rm -u "$USER_UID:$GROUP_GID" node sh -c "pnpm install && node_modules/gulp/bin/gulp.js drop-cache && npm run test:dev"
+      docker compose run --rm -u "$USER_UID:$GROUP_GID" node sh -c "$PNPM install && node_modules/gulp/bin/gulp.js drop-cache && npm run test:dev"
   esac
 }
 
