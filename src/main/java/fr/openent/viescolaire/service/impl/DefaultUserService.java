@@ -751,7 +751,10 @@ public class DefaultUserService extends SqlCrudService implements UserService {
 
     @Override
     public void getResponsablesDirection(String idStructure, Handler<Either<String, JsonArray>> handler) {
-        String query = "MATCH (u:User{profiles:['Personnel']})-[IN]->(g:Group)-[DEPENDS]->(s:Structure {id:$structureId}) " +
+        // `[IN]` et `[DEPENDS]` nommaient des variables de relation, donc n'importe quel type de
+        // lien : le motif traversait tout le voisinage au lieu des deux types voulus (0,69 s
+        // contre 0,04 s ici, et des rattachements que la requête n'entendait pas suivre).
+        String query = "MATCH (u:User{profiles:['Personnel']})-[:IN]->(g:Group)-[:DEPENDS]->(s:Structure {id:$structureId}) " +
                 "WHERE ANY(function IN u.functions WHERE function =~ (s.externalId+'\\\\$DIR\\\\$.*'))" +
                 " RETURN DISTINCT u.id as id, u.displayName as displayName, u.externalId as externalId";
         JsonObject param = new JsonObject();

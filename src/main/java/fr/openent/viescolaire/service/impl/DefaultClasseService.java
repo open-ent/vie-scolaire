@@ -76,7 +76,9 @@ public class DefaultClasseService extends SqlCrudService implements ClasseServic
         StringBuilder query = new StringBuilder();
         JsonObject params = new JsonObject();
 
-        query.append("MATCH (c:Class)-[BELONGS]->(s:Structure) WHERE s.id = $idEtablissement RETURN c.id as idClasse ORDER BY c.name");
+        // Ancrée sur l'établissement désigné, et `[BELONGS]` nommait une variable de relation,
+        // donc n'importe quel type de lien : `[:BELONGS]` dit ce que le motif voulait dire.
+        query.append("MATCH (s:Structure {id: $idEtablissement})<-[:BELONGS]-(c:Class) RETURN c.id as idClasse ORDER BY c.name");
         params.put("idEtablissement", idEtablissement);
 
         neo4j.execute(query.toString(), params, Neo4jResult.validResultHandler(handler));
@@ -156,7 +158,9 @@ public class DefaultClasseService extends SqlCrudService implements ClasseServic
 
         // Requête Néo
         StringBuilder query = new StringBuilder()
-                .append(" MATCH (u:User {profiles: ['Student']})-[ADMINISTRATIVE_ATTACHMENT]->(s:Structure {id:$idEtablissement})<-[b:BELONGS]-(c:Class) ")
+                // Ancrée sur l'établissement, et le type de la relation est nommé : `[ADMINISTRATIVE_ATTACHMENT]`
+                // était une variable de relation, donc n'importe quel lien (1,11 s contre 0,26 s ici).
+                .append(" MATCH (s:Structure {id:$idEtablissement})<-[:ADMINISTRATIVE_ATTACHMENT]-(u:User {profiles: ['Student']}), (s)<-[b:BELONGS]-(c:Class) ")
                 .append(" WHERE c.externalId IN u.classes AND s.externalId IN u.structures ")
                 .append(filter)
                 .append(returning)

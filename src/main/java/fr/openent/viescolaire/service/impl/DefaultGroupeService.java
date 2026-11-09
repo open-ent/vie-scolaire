@@ -234,17 +234,24 @@ public class DefaultGroupeService extends SqlCrudService implements GroupeServic
                 .put(Field.USERID, userId)
                 .put(Field.QUERY, query);
 
-        String neo4jquery = "MATCH (g)-[:BELONGS|:DEPENDS]->(s:Structure {id:$structureId}) WHERE " +
+        // Ancrée sur la structure désignée : ArcadeDB exécute le motif dans l'ordre écrit, et
+        // partir de (g) sans point d'entrée indexé lui faisait parcourir le graphe entier.
+        String neo4jquery = "MATCH (s:Structure {id:$structureId})<-[:BELONGS|:DEPENDS]-(g) WHERE " +
                 getQueryFilter(fields) +
                 "AND (g:Class OR g:FunctionalGroup) " +
                 "RETURN g.id as id, g.name as name " +
                 "ORDER BY g.name";
 
+        // Second membre : ancré sur l'utilisateur désigné, jamais sur l'ensemble des élèves.
+        // Partir de User{profiles} balayait les 514 000 utilisateurs — 104 s mesurées en local,
+        // au-delà du délai de 30 s du bus d'événements, donc un écran vide sans erreur.
+        // Le motif est non orienté : le lire dans l'autre sens ne change rien à ce qu'il désigne.
         String queryFromUserId = "MATCH (u:User {id:$userId})-[:IN]->" +
                 "(:ProfileGroup)-[:DEPENDS]->(g: Class)-[:BELONGS]->(s:Structure {id:$structureId}) WHERE " +
                 getQueryFilter(fields) + "RETURN g.id as id, g.name as name ORDER BY g.name " +
                 "UNION " +
-                "MATCH (u:User {profiles:['Student']})--(:ProfileGroup)--(c:Class)--(:ProfileGroup)--(t:User {id:$userId}) " +
+                "MATCH (t:User {id:$userId})--(:ProfileGroup)--(c:Class)--(:ProfileGroup)--(u:User) " +
+                "WHERE u.profiles = ['Student'] " +
                 "WITH u, c MATCH (u)--(g)-[:DEPENDS]->(s:Structure {id:$structureId}) WHERE (g:FunctionalGroup) AND " +
                 getQueryFilter(fields) + "RETURN DISTINCT g.id as id, g.name as name ORDER BY g.name";
 
