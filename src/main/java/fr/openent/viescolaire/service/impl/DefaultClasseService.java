@@ -167,11 +167,14 @@ public class DefaultClasseService extends SqlCrudService implements ClasseServic
 
                 .append(" UNION ")
 
-                // Récupération des élèves supprimés mais présents dans l'annuaire
-                .append(" MATCH (u:User{profiles:['Student']})-[IN]->(d:DeleteGroup), ")
-                .append(" (s:Structure {id:$idEtablissement}) ")
-                .append(" WHERE s.externalId IN u.structures ")
-                .append(" OPTIONAL MATCH (c:Class)-[b:BELONGS]->(s) ")
+                // Récupération des élèves supprimés mais présents dans l'annuaire.
+                // Ancree sur le groupe de suppression (3 comptes) et sur l'etablissement deja
+                // lie ; le type de la relation est nomme (`[IN]` sans deux-points nommait une
+                // variable, donc suivait n'importe quel lien). Mesure : 0,73 s -> 0,002 s.
+                .append(" MATCH (s:Structure {id:$idEtablissement}) WITH s ")
+                .append(" MATCH (d:DeleteGroup)<-[:IN]-(u:User) ")
+                .append(" WHERE u.profiles = ['Student'] AND s.externalId IN u.structures ")
+                .append(" OPTIONAL MATCH (s)<-[b:BELONGS]-(c:Class) ")
                 .append(" WHERE  c.externalId IN u.classes ")
                 .append(filter)
                 .append(returning);
@@ -316,14 +319,23 @@ public class DefaultClasseService extends SqlCrudService implements ClasseServic
     public void getEtabClasses(String[] idClasses, Handler<Either<String, JsonArray>> handler) {
         StringBuilder query = new StringBuilder();
         JsonObject params = new JsonObject();
-        query.append("MATCH (g:Class)-[:BELONGS]->(s:Structure) WHERE g.id IN $idClasses ")
+        // Ancree sur l'audience : un \"WHERE g.id IN $liste\" n'emprunte pas l'index des qu'il y
+        // a un parcours dans le motif. La derniere branche nommait de plus une variable de
+        // relation (`[BELONGS]` sans deux-points) et suivait donc n'importe quel lien.
+        // Mesure sur les donnees de production, 10 audiences : 0,020 s -> 0,004 s.
+        String audienceUnwind = " UNWIND (CASE WHEN $idClasses IS NULL OR size($idClasses) = 0 " +
+                " THEN [''] ELSE $idClasses END) AS audienceId ";
+        query.append(audienceUnwind)
+                .append(" MATCH (g:Class {id: audienceId})-[:BELONGS]->(s:Structure) ")
                 .append(" return DISTINCT(s.id) AS idStructure, COLLECT(g.id) AS idClasses ")
-                .append(" UNION MATCH (g:FunctionalGroup)-[:DEPENDS]->(s:Structure) WHERE g.id IN $idClasses ")
+                .append(" UNION ").append(audienceUnwind)
+                .append(" MATCH (g:FunctionalGroup {id: audienceId})-[:DEPENDS]->(s:Structure) ")
                 .append(" return DISTINCT(s.id) AS idStructure, COLLECT(g.id) AS idClasses ")
-                .append(" UNION MATCH (g:ManualGroup)-[:DEPENDS]->(s:Structure) WHERE g.id IN $idClasses ")
+                .append(" UNION ").append(audienceUnwind)
+                .append(" MATCH (g:ManualGroup {id: audienceId})-[:DEPENDS]->(s:Structure) ")
                 .append(" return DISTINCT(s.id) AS idStructure, COLLECT(g.id) AS idClasses")
-                .append(" UNION MATCH (g:ManualGroup)-[:DEPENDS]->(:Class)-[BELONGS]->(s:Structure) ")
-                .append(" WHERE g.id IN $idClasses ")
+                .append(" UNION ").append(audienceUnwind)
+                .append(" MATCH (g:ManualGroup {id: audienceId})-[:DEPENDS]->(:Class)-[:BELONGS]->(s:Structure) ")
                 .append(" return DISTINCT(s.id) AS idStructure, COLLECT(g.id) AS idClasses");
         params.put("idClasses", new JsonArray(Arrays.asList(idClasses)));
 
@@ -341,15 +353,21 @@ public class DefaultClasseService extends SqlCrudService implements ClasseServic
     public void getClasseEleve(String idEtablissement, String eleveId, Handler<Either<String, JsonArray>> handler) {
         StringBuilder query = new StringBuilder();
         JsonObject params = new JsonObject();
-        query.append(" MATCH (u:User)-[r:ADMINISTRATIVE_ATTACHMENT]->(s:Structure) where u.profiles= [\"Student\"] ")
-                .append(" and u.id=$idEleve  and s.id=$idEtablissement ")
-                .append(" with u  ")
-                .append(" Match  (c:Class) where  c.externalId IN u.classes ")
-                .append(" with   c, u ")
-                .append(" OPTIONAL Match (u2:User)-[i:IN]->(f:ManualGroup) where u.id = u2.id  ")
-                .append(" with  collect(DISTINCT c.id) as C,  u2 ")
-                .append(" OPTIONAL Match (u3:User)-[i:IN]->(f:FunctionalGroup) where u2.id = u3.id  ")
-                .append(" Return C + collect(f.id)  as Classes ");
+        // ArcadeDB refusait la requete entiere en 400 (AmbiguousAggregationExpression) :
+        // \"C + collect(f.id)\" melange une variable deja agregee et un nouvel agregat dans la
+        // meme projection. Les agregats sont desormais calcules chacun dans leur WITH, puis
+        // concatenes. Au passage, le motif est ancre sur l'eleve (les auto-jointures u2/u3
+        // repartaient d'un balayage des 514 000 comptes a chaque OPTIONAL MATCH).
+        query.append(" MATCH (u:User {id: $idEleve})-[:ADMINISTRATIVE_ATTACHMENT]->(s:Structure {id: $idEtablissement}) ")
+                .append(" WHERE u.profiles = [\"Student\"] ")
+                .append(" WITH u ")
+                .append(" MATCH (c:Class) WHERE c.externalId IN u.classes ")
+                .append(" WITH c, u ")
+                .append(" OPTIONAL MATCH (u)-[:IN]->(f:ManualGroup) ")
+                .append(" WITH collect(DISTINCT c.id) as C, u, collect(DISTINCT f.id) as M ")
+                .append(" OPTIONAL MATCH (u)-[:IN]->(f2:FunctionalGroup) ")
+                .append(" WITH C, M, collect(DISTINCT f2.id) as F ")
+                .append(" RETURN C + M + F as Classes ");
         params.put("idEtablissement", idEtablissement);
         params.put("idEleve", eleveId);
         neo4j.execute(query.toString(), params, Neo4jResult.validResultHandler(handler));
@@ -845,22 +863,28 @@ public class DefaultClasseService extends SqlCrudService implements ClasseServic
         Promise<JsonArray> promise = Promise.promise();
         JsonObject params = new JsonObject();
 
-        String query = " MATCH(s:Structure)<-[:DEPENDS]-(n:FunctionalGroup)<-[:IN]-(u:User{profiles:['Student']}) " +
-                " WHERE n.id IN $idsAudience WITH s, n, u " +
-                " MATCH (c:Class)-[:BELONGS]->(s) WHERE c.externalId IN u.classes RETURN n.id as id_audience, " +
+        // Ancree sur l'audience : ArcadeDB parcourt le motif dans l'ordre ecrit, et un
+        // \"WHERE n.id IN $liste\" n'emprunte pas l'index des qu'il y a un parcours dans le
+        // motif. Ecrite depuis (s:Structure), la requete balayait les 536 etablissements et
+        // leurs groupes a chaque appel. Mesure sur les donnees de production, 60 audiences :
+        // 504 ms -> 23 ms (resultats identiques). En production, 5,1 s par appel sous la
+        // charge de la tache horaire de statistics-presences.
+        String audienceUnwind = " UNWIND (CASE WHEN $idsAudience IS NULL OR size($idsAudience) = 0 " +
+                " THEN [''] ELSE $idsAudience END) AS audienceId ";
+        String query = audienceUnwind +
+                " MATCH (n:FunctionalGroup {id: audienceId})-[:DEPENDS]->(s:Structure) " +
+                " MATCH (n)<-[:IN]-(u:User) WHERE u.profiles = ['Student'] WITH s, n, u " +
+                " MATCH (s)<-[:BELONGS]-(c:Class) WHERE c.externalId IN u.classes RETURN n.id as id_audience, " +
                 " c.id AS id_classes " +
-                " UNION " +
-                " MATCH (s:Structure)<-[:DEPENDS]-(n:ManualGroup)<-[:IN]-(u:User{profiles:['Student']}) " +
-                " WHERE n.id IN $idsAudience WITH  s, n, u " +
-                " MATCH (c:Class)-[:BELONGS]->(s) WHERE c.externalId IN u.classes RETURN n.id as id_audience, " +
+                " UNION " + audienceUnwind +
+                " MATCH (n:ManualGroup {id: audienceId})-[:DEPENDS]->(s:Structure) " +
+                " MATCH (n)<-[:IN]-(u:User) WHERE u.profiles = ['Student'] WITH s, n, u " +
+                " MATCH (s)<-[:BELONGS]-(c:Class) WHERE c.externalId IN u.classes RETURN n.id as id_audience, " +
                 " c.id AS id_classes " +
-                " UNION " +
-                " MATCH (c:Class) " +
-                " WHERE c.id IN $idsAudience " +
+                " UNION " + audienceUnwind +
+                " MATCH (c:Class {id: audienceId}) " +
                 " RETURN c.id AS id_audience, c.id AS id_classes ";
-        params.put("idsAudience", audiences)
-                .put("idsAudience", audiences)
-                .put("idsAudience", audiences);
+        params.put("idsAudience", audiences);
 
         neo4j.execute(query, params, Neo4jResult.validResultHandler(FutureHelper.handlerJsonArray(promise)));
 

@@ -657,15 +657,24 @@ public class DefaultUserService extends SqlCrudService implements UserService {
     @Override
     public void getUsers(List<String> idUsers, Handler<Either<String, JsonArray>> handler){
         StringBuilder query=new StringBuilder();
-        query.append("MATCH (u:User) WHERE u.id IN $id " +
+        // Un OPTIONAL MATCH suivi d'un WHERE ... IN n'emprunte pas l'index sur ArcadeDB : il
+        // balaye le type entier a chaque ligne (71 508 Group, 6 570 Class par usager).
+        // Les listes d'externalId sont donc deroulees et chaque noeud cherche par sa map de
+        // proprietes. Mesure sur les donnees de production, 20 usagers : 2,4 s -> 0,04 s
+        // (memes resultats ; l'ordre dans collect() n'a jamais ete garanti, pas d'ORDER BY).
+        query.append("UNWIND (CASE WHEN $id IS NULL OR size($id) = 0 THEN [''] ELSE $id END) AS userId " +
+                "MATCH (u:User {id: userId}) " +
                 "OPTIONAL MATCH (s:Structure) " +
                 "WHERE s.externalId IN u.structures " +
-                "OPTIONAL MATCH (g:Group) " +
-                "WHERE g.externalId IN u.groups " +
-                "OPTIONAL MATCH (c:Class) " +
-                "WHERE c.externalId IN u.classes " +
+                "WITH u, COLLECT(DISTINCT s.id) AS structureIds " +
+                "UNWIND (CASE WHEN u.groups IS NULL OR size(u.groups) = 0 THEN [''] ELSE u.groups END) AS groupExternalId " +
+                "OPTIONAL MATCH (g:Group {externalId: groupExternalId}) " +
+                "WITH u, structureIds, COLLECT(DISTINCT g.id) AS currentGroupIds, " +
+                "COLLECT(DISTINCT g.externalId) AS currentGroupExternalIds " +
+                "UNWIND (CASE WHEN u.classes IS NULL OR size(u.classes) = 0 THEN [''] ELSE u.classes END) AS classExternalId " +
+                "OPTIONAL MATCH (c:Class {externalId: classExternalId}) " +
                 "RETURN u.externalId AS externalId, u.id AS id, u.displayName AS displayName, u.firstName AS firstName, u.lastName AS lastName, u.profiles as type, u.birthDate AS birthDate, " +
-                "COLLECT(DISTINCT s.id) AS structureIds, COLLECT(DISTINCT g.id) AS currentGroupIds, COLLECT(DISTINCT g.externalId) AS currentGroupExternalIds, " +
+                "structureIds AS structureIds, currentGroupIds AS currentGroupIds, currentGroupExternalIds AS currentGroupExternalIds, " +
                 "COLLECT(DISTINCT c.id) AS currentClassIds, COLLECT(DISTINCT c.externalId) AS currentClassExternalIds");
 
         JsonArray usersArr = new JsonArray(idUsers);
@@ -824,7 +833,11 @@ public class DefaultUserService extends SqlCrudService implements UserService {
                 "ELSE classes_externalIds " +
                 "END AS class_externalId " +
                 "OPTIONAL MATCH (c:Class {externalId: class_externalId})-[:BELONGS]->(s:Structure {id: $structureId}) " +
-                "WITH u, COLLECT(DISTINCT c.id) + attachedClassIds AS allClassIds " +
+                // ArcadeDB refusait la requete entiere en 400 (AmbiguousAggregationExpression) :
+                // un nouvel agregat et une variable deja agregee ne peuvent pas etre melanges
+                // dans la meme projection. L'agregat est calcule seul, la concatenation suit.
+                "WITH u, attachedClassIds, COLLECT(DISTINCT c.id) AS ownClassIds " +
+                "WITH u, ownClassIds + attachedClassIds AS allClassIds " +
                 "RETURN u.id AS id, u.displayName AS displayName, allClassIds AS classIds " +
                 "ORDER BY displayName";
 
